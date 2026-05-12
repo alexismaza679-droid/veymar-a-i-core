@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,8 +21,14 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trash2 } from "lucide-react";
+import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog } from "lucide-react";
 import { toast } from "sonner";
+import {
+  useSpeechRecognition,
+  speak,
+  getVoiceOwner,
+  setVoiceOwner,
+} from "@/hooks/use-voice";
 
 export const Route = createFileRoute("/_authed/chat")({
   component: ChatPage,
@@ -105,12 +111,59 @@ function ChatInner({
     },
   });
 
+  const [voiceOutput, setVoiceOutput] = useState(true);
+  const [owner, setOwner] = useState<string | null>(() => getVoiceOwner());
+  const lastSpokenRef = useRef<string | null>(null);
+
   const isWorking = status === "submitted" || status === "streaming";
+
+  const sendText = (text: string, fromVoice = false) => {
+    if (!text || isWorking) return;
+    const prefix =
+      fromVoice && owner
+        ? `[Entrada por voz · Identidad reconocida: ${owner}] `
+        : fromVoice
+          ? `[Entrada por voz · Identidad desconocida] `
+          : "";
+    void sendMessage({ text: prefix + text });
+  };
+
+  const { listening, interim, supported, start, stop } = useSpeechRecognition({
+    onFinal: (text) => sendText(text, true),
+  });
+
+  // Speak last assistant message when streaming finishes
+  useEffect(() => {
+    if (!voiceOutput) return;
+    if (status !== "ready") return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return;
+    const text = last.parts
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join(" ")
+      .trim();
+    if (!text || lastSpokenRef.current === last.id) return;
+    lastSpokenRef.current = last.id;
+    speak(text);
+  }, [status, messages, voiceOutput]);
 
   const handleSubmit = (msg: PromptInputMessage) => {
     const text = msg.text?.trim();
-    if (!text || isWorking) return;
-    void sendMessage({ text });
+    if (!text) return;
+    sendText(text, false);
+  };
+
+  const configureOwner = () => {
+    const current = getVoiceOwner() ?? "";
+    const name = prompt(
+      "¿Cómo debo llamarle cuando reconozca su voz? (Ej: Señor Stark)",
+      current,
+    );
+    if (name && name.trim()) {
+      setVoiceOwner(name.trim());
+      setOwner(name.trim());
+      toast.success(`Perfil de voz registrado: ${name.trim()}`);
+    }
   };
 
   const wipe = async () => {
@@ -137,6 +190,22 @@ function ChatInner({
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={configureOwner}
+            title={owner ? `Perfil de voz: ${owner}` : "Registrar perfil de voz"}
+          >
+            <UserCog className={`h-4 w-4 ${owner ? "text-primary" : ""}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => setVoiceOutput((v) => !v)}
+            title={voiceOutput ? "Silenciar voz" : "Activar voz"}
+          >
+            {voiceOutput ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
+          </Button>
           <Button variant="ghost" size="icon-sm" onClick={wipe} title="Reiniciar memoria">
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -195,7 +264,26 @@ function ChatInner({
             autoFocus
             className="min-h-[64px] bg-transparent text-base"
           />
-          <PromptInputFooter className="justify-end px-2 pb-2">
+          <PromptInputFooter className="justify-between px-2 pb-2">
+            <div className="flex items-center gap-2">
+              {supported ? (
+                <Button
+                  type="button"
+                  variant={listening ? "default" : "ghost"}
+                  size="icon-sm"
+                  onClick={() => (listening ? stop() : start())}
+                  className={listening ? "animate-pulse bg-primary text-primary-foreground" : ""}
+                  title={listening ? "Detener escucha" : "Hablar con VEYMAR"}
+                >
+                  {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              ) : null}
+              {interim ? (
+                <span className="text-xs italic text-muted-foreground truncate max-w-[200px]">
+                  «{interim}»
+                </span>
+              ) : null}
+            </div>
             <PromptInputSubmit
               status={status}
               disabled={isWorking}
