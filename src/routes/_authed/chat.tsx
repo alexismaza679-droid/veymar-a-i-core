@@ -227,6 +227,20 @@ function ChatInner({
           >
             <UserCog className={`h-4 w-4 ${owner ? "text-primary" : ""}`} />
           </Button>
+          {wake.supported && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setWakeMode((v) => !v)}
+              title={wakeMode ? "Desactivar palabra clave 'Hey VEYMAR'" : "Activar palabra clave 'Hey VEYMAR'"}
+            >
+              {wakeMode ? (
+                <Ear className="h-4 w-4 text-primary animate-pulse" />
+              ) : (
+                <EarOff className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon-sm"
