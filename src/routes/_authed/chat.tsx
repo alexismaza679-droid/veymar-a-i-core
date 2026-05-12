@@ -21,13 +21,14 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog } from "lucide-react";
+import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSpeechRecognition,
   speak,
   getVoiceOwner,
   setVoiceOwner,
+  extractWakeCommand,
 } from "@/hooks/use-voice";
 
 export const Route = createFileRoute("/_authed/chat")({
