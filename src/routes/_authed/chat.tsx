@@ -21,13 +21,14 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog } from "lucide-react";
+import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSpeechRecognition,
   speak,
   getVoiceOwner,
   setVoiceOwner,
+  extractWakeCommand,
 } from "@/hooks/use-voice";
 
 export const Route = createFileRoute("/_authed/chat")({
@@ -48,7 +49,14 @@ function ChatPage() {
           const token = data.session?.access_token;
           const headers = new Headers(init?.headers);
           if (token) headers.set("Authorization", `Bearer ${token}`);
-          return fetch(url, { ...init, headers });
+          headers.set("Content-Type", "application/json");
+          let body = init?.body;
+          try {
+            const parsed = body ? JSON.parse(body as string) : {};
+            parsed.ownerName = getVoiceOwner();
+            body = JSON.stringify(parsed);
+          } catch {}
+          return fetch(url, { ...init, headers, body });
         },
       }),
     [],
@@ -112,6 +120,7 @@ function ChatInner({
   });
 
   const [voiceOutput, setVoiceOutput] = useState(true);
+  const [wakeMode, setWakeMode] = useState(false);
   const [owner, setOwner] = useState<string | null>(() => getVoiceOwner());
   const lastSpokenRef = useRef<string | null>(null);
 
@@ -131,6 +140,26 @@ function ChatInner({
   const { listening, interim, supported, start, stop } = useSpeechRecognition({
     onFinal: (text) => sendText(text, true),
   });
+
+  // Always-on wake-word recognizer ("hey veymar ...")
+  const wake = useSpeechRecognition({
+    continuous: true,
+    onFinal: (text) => {
+      const cmd = extractWakeCommand(text);
+      if (cmd === null) return;
+      if (cmd === "") {
+        speak(owner ? `Le escucho, ${owner}.` : "Le escucho.");
+        return;
+      }
+      sendText(cmd, true);
+    },
+  });
+
+  useEffect(() => {
+    if (wakeMode && wake.supported && !wake.listening) wake.start();
+    if (!wakeMode && wake.listening) wake.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wakeMode]);
 
   // Speak last assistant message when streaming finishes
   useEffect(() => {
@@ -198,6 +227,20 @@ function ChatInner({
           >
             <UserCog className={`h-4 w-4 ${owner ? "text-primary" : ""}`} />
           </Button>
+          {wake.supported && (
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setWakeMode((v) => !v)}
+              title={wakeMode ? "Desactivar palabra clave 'Hey VEYMAR'" : "Activar palabra clave 'Hey VEYMAR'"}
+            >
+              {wakeMode ? (
+                <Ear className="h-4 w-4 text-primary animate-pulse" />
+              ) : (
+                <EarOff className="h-4 w-4" />
+              )}
+            </Button>
+          )}
           <Button
             variant="ghost"
             size="icon-sm"
@@ -228,12 +271,51 @@ function ChatInner({
             messages.map((m) => (
               <Message key={m.id} from={m.role}>
                 {m.role === "assistant" ? (
-                  <div className="w-full max-w-none px-1 text-foreground">
-                    {m.parts.map((part, i) =>
-                      part.type === "text" ? (
-                        <MessageResponse key={i}>{part.text}</MessageResponse>
-                      ) : null,
-                    )}
+                  <div className="w-full max-w-none px-1 text-foreground space-y-3">
+                    {m.parts.map((part, i) => {
+                      if (part.type === "text") {
+                        return <MessageResponse key={i}>{part.text}</MessageResponse>;
+                      }
+                      // Tool part rendering (AI SDK v5: type === `tool-${name}`)
+                      const p: any = part;
+                      if (p.type === "tool-generateImage") {
+                        const out = p.output;
+                        if (out?.ok && out?.imageUrl) {
+                          return (
+                            <figure key={i} className="rounded-xl overflow-hidden border border-border/40 panel-glow">
+                              <img src={out.imageUrl} alt={out.prompt ?? "Imagen generada"} className="w-full h-auto block" />
+                              {out.prompt && (
+                                <figcaption className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground px-3 py-2 bg-background/40">
+                                  {out.prompt}
+                                </figcaption>
+                              )}
+                            </figure>
+                          );
+                        }
+                        if (p.state === "input-streaming" || p.state === "input-available") {
+                          return (
+                            <div key={i} className="text-xs text-muted-foreground italic px-1">
+                              Generando imagen…
+                            </div>
+                          );
+                        }
+                        if (out?.error) {
+                          return (
+                            <div key={i} className="text-xs text-destructive px-1">
+                              No pude generar la imagen: {out.error}
+                            </div>
+                          );
+                        }
+                      }
+                      if (p.type === "tool-getCurrentTime" && p.state === "input-streaming") {
+                        return (
+                          <div key={i} className="text-xs text-muted-foreground italic px-1">
+                            Consultando reloj…
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
                 ) : (
                   <MessageContent className="bg-primary text-primary-foreground">
