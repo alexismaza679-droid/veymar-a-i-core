@@ -264,7 +264,26 @@ function ChatInner({
             autoFocus
             className="min-h-[64px] bg-transparent text-base"
           />
-          <PromptInputFooter className="justify-end px-2 pb-2">
+          <PromptInputFooter className="justify-between px-2 pb-2">
+            <div className="flex items-center gap-2">
+              {supported ? (
+                <Button
+                  type="button"
+                  variant={listening ? "default" : "ghost"}
+                  size="icon-sm"
+                  onClick={() => (listening ? stop() : start())}
+                  className={listening ? "animate-pulse bg-primary text-primary-foreground" : ""}
+                  title={listening ? "Detener escucha" : "Hablar con VEYMAR"}
+                >
+                  {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </Button>
+              ) : null}
+              {interim ? (
+                <span className="text-xs italic text-muted-foreground truncate max-w-[200px]">
+                  «{interim}»
+                </span>
+              ) : null}
+            </div>
             <PromptInputSubmit
               status={status}
               disabled={isWorking}
