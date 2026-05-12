@@ -48,7 +48,14 @@ function ChatPage() {
           const token = data.session?.access_token;
           const headers = new Headers(init?.headers);
           if (token) headers.set("Authorization", `Bearer ${token}`);
-          return fetch(url, { ...init, headers });
+          headers.set("Content-Type", "application/json");
+          let body = init?.body;
+          try {
+            const parsed = body ? JSON.parse(body as string) : {};
+            parsed.ownerName = getVoiceOwner();
+            body = JSON.stringify(parsed);
+          } catch {}
+          return fetch(url, { ...init, headers, body });
         },
       }),
     [],
