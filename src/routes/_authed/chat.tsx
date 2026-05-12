@@ -120,6 +120,7 @@ function ChatInner({
   });
 
   const [voiceOutput, setVoiceOutput] = useState(true);
+  const [wakeMode, setWakeMode] = useState(false);
   const [owner, setOwner] = useState<string | null>(() => getVoiceOwner());
   const lastSpokenRef = useRef<string | null>(null);
 
@@ -139,6 +140,26 @@ function ChatInner({
   const { listening, interim, supported, start, stop } = useSpeechRecognition({
     onFinal: (text) => sendText(text, true),
   });
+
+  // Always-on wake-word recognizer ("hey veymar ...")
+  const wake = useSpeechRecognition({
+    continuous: true,
+    onFinal: (text) => {
+      const cmd = extractWakeCommand(text);
+      if (cmd === null) return;
+      if (cmd === "") {
+        speak(owner ? `Le escucho, ${owner}.` : "Le escucho.");
+        return;
+      }
+      sendText(cmd, true);
+    },
+  });
+
+  useEffect(() => {
+    if (wakeMode && wake.supported && !wake.listening) wake.start();
+    if (!wakeMode && wake.listening) wake.stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [wakeMode]);
 
   // Speak last assistant message when streaming finishes
   useEffect(() => {
