@@ -51,7 +51,7 @@ export const Route = createFileRoute("/api/chat")({
           const result = streamText({
             model,
             system: VEYMAR_SYSTEM_PROMPT,
-            messages: convertToModelMessages(messages),
+            messages: await convertToModelMessages(messages),
           });
 
           return result.toUIMessageStreamResponse({
