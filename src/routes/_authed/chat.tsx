@@ -111,12 +111,59 @@ function ChatInner({
     },
   });
 
+  const [voiceOutput, setVoiceOutput] = useState(true);
+  const [owner, setOwner] = useState<string | null>(() => getVoiceOwner());
+  const lastSpokenRef = useRef<string | null>(null);
+
   const isWorking = status === "submitted" || status === "streaming";
+
+  const sendText = (text: string, fromVoice = false) => {
+    if (!text || isWorking) return;
+    const prefix =
+      fromVoice && owner
+        ? `[Entrada por voz · Identidad reconocida: ${owner}] `
+        : fromVoice
+          ? `[Entrada por voz · Identidad desconocida] `
+          : "";
+    void sendMessage({ text: prefix + text });
+  };
+
+  const { listening, interim, supported, start, stop } = useSpeechRecognition({
+    onFinal: (text) => sendText(text, true),
+  });
+
+  // Speak last assistant message when streaming finishes
+  useEffect(() => {
+    if (!voiceOutput) return;
+    if (status !== "ready") return;
+    const last = messages[messages.length - 1];
+    if (!last || last.role !== "assistant") return;
+    const text = last.parts
+      .map((p) => (p.type === "text" ? p.text : ""))
+      .join(" ")
+      .trim();
+    if (!text || lastSpokenRef.current === last.id) return;
+    lastSpokenRef.current = last.id;
+    speak(text);
+  }, [status, messages, voiceOutput]);
 
   const handleSubmit = (msg: PromptInputMessage) => {
     const text = msg.text?.trim();
-    if (!text || isWorking) return;
-    void sendMessage({ text });
+    if (!text) return;
+    sendText(text, false);
+  };
+
+  const configureOwner = () => {
+    const current = getVoiceOwner() ?? "";
+    const name = prompt(
+      "¿Cómo debo llamarle cuando reconozca su voz? (Ej: Señor Stark)",
+      current,
+    );
+    if (name && name.trim()) {
+      setVoiceOwner(name.trim());
+      setOwner(name.trim());
+      toast.success(`Perfil de voz registrado: ${name.trim()}`);
+    }
   };
 
   const wipe = async () => {
