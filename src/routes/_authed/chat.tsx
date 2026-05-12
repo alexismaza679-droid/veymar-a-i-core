@@ -271,12 +271,51 @@ function ChatInner({
             messages.map((m) => (
               <Message key={m.id} from={m.role}>
                 {m.role === "assistant" ? (
-                  <div className="w-full max-w-none px-1 text-foreground">
-                    {m.parts.map((part, i) =>
-                      part.type === "text" ? (
-                        <MessageResponse key={i}>{part.text}</MessageResponse>
-                      ) : null,
-                    )}
+                  <div className="w-full max-w-none px-1 text-foreground space-y-3">
+                    {m.parts.map((part, i) => {
+                      if (part.type === "text") {
+                        return <MessageResponse key={i}>{part.text}</MessageResponse>;
+                      }
+                      // Tool part rendering (AI SDK v5: type === `tool-${name}`)
+                      const p: any = part;
+                      if (p.type === "tool-generateImage") {
+                        const out = p.output;
+                        if (out?.ok && out?.imageUrl) {
+                          return (
+                            <figure key={i} className="rounded-xl overflow-hidden border border-border/40 panel-glow">
+                              <img src={out.imageUrl} alt={out.prompt ?? "Imagen generada"} className="w-full h-auto block" />
+                              {out.prompt && (
+                                <figcaption className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground px-3 py-2 bg-background/40">
+                                  {out.prompt}
+                                </figcaption>
+                              )}
+                            </figure>
+                          );
+                        }
+                        if (p.state === "input-streaming" || p.state === "input-available") {
+                          return (
+                            <div key={i} className="text-xs text-muted-foreground italic px-1">
+                              Generando imagen…
+                            </div>
+                          );
+                        }
+                        if (out?.error) {
+                          return (
+                            <div key={i} className="text-xs text-destructive px-1">
+                              No pude generar la imagen: {out.error}
+                            </div>
+                          );
+                        }
+                      }
+                      if (p.type === "tool-getCurrentTime" && p.state === "input-streaming") {
+                        return (
+                          <div key={i} className="text-xs text-muted-foreground italic px-1">
+                            Consultando reloj…
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </div>
                 ) : (
                   <MessageContent className="bg-primary text-primary-foreground">
