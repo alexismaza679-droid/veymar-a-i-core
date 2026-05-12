@@ -1,10 +1,36 @@
 import "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
-import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createLovableAiGatewayProvider, VEYMAR_SYSTEM_PROMPT } from "@/lib/ai-gateway";
+import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage } from "ai";
+import { z } from "zod";
+import { createLovableAiGatewayProvider, buildVeymarSystemPrompt } from "@/lib/ai-gateway";
 import { createClient } from "@supabase/supabase-js";
 
-type ChatBody = { messages?: UIMessage[] };
+type ChatBody = { messages?: UIMessage[]; ownerName?: string | null };
+
+async function generateImageViaGateway(apiKey: string, prompt: string): Promise<string> {
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Lovable-API-Key": apiKey,
+      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-3.1-flash-image-preview",
+      messages: [{ role: "user", content: prompt }],
+      modalities: ["image", "text"],
+    }),
+  });
+  if (!res.ok) {
+    throw new Error(`Image gateway error ${res.status}: ${await res.text()}`);
+  }
+  const json: any = await res.json();
+  const img =
+    json?.choices?.[0]?.message?.images?.[0]?.image_url?.url ??
+    json?.choices?.[0]?.message?.images?.[0]?.url;
+  if (!img) throw new Error("Imagen no recibida del proveedor.");
+  return img as string;
+}
 
 export const Route = createFileRoute("/api/chat")({
   server: {
@@ -33,9 +59,8 @@ export const Route = createFileRoute("/api/chat")({
           }
           const userId = claims.claims.sub as string;
 
-          const { messages = [] } = (await request.json()) as ChatBody;
+          const { messages = [], ownerName } = (await request.json()) as ChatBody;
 
-          // Persist last user message
           const lastUser = [...messages].reverse().find((m) => m.role === "user");
           if (lastUser) {
             await supabase.from("messages").insert({
@@ -48,9 +73,65 @@ export const Route = createFileRoute("/api/chat")({
           const gateway = createLovableAiGatewayProvider(apiKey);
           const model = gateway("google/gemini-3-flash-preview");
 
+          const tools = {
+            getCurrentTime: tool({
+              description:
+                "Obtiene la fecha y hora reales actuales. Úsala SIEMPRE que el usuario pregunte por la hora o la fecha.",
+              inputSchema: z.object({
+                timeZone: z
+                  .string()
+                  .optional()
+                  .describe("IANA TZ (ej: 'America/Mexico_City'). Si no se conoce, omitir."),
+              }),
+              execute: async ({ timeZone }) => {
+                const now = new Date();
+                try {
+                  const fmt = new Intl.DateTimeFormat("es-ES", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                    timeZone: timeZone || "UTC",
+                  });
+                  return {
+                    iso: now.toISOString(),
+                    formatted: fmt.format(now),
+                    timeZone: timeZone || "UTC",
+                  };
+                } catch {
+                  return { iso: now.toISOString(), formatted: now.toUTCString(), timeZone: "UTC" };
+                }
+              },
+            }),
+            generateImage: tool({
+              description:
+                "Genera una imagen a partir de una descripción en lenguaje natural. Úsala cuando el usuario pida crear, dibujar o imaginar una imagen.",
+              inputSchema: z.object({
+                prompt: z
+                  .string()
+                  .describe("Descripción detallada y vívida de la imagen a generar, en inglés o español."),
+              }),
+              execute: async ({ prompt }) => {
+                try {
+                  const url = await generateImageViaGateway(apiKey, prompt);
+                  return { ok: true, imageUrl: url, prompt };
+                } catch (e: any) {
+                  return { ok: false, error: e?.message ?? "Error generando imagen" };
+                }
+              },
+            }),
+          };
+
+          const system = buildVeymarSystemPrompt({ now: new Date(), ownerName });
+
           const result = streamText({
             model,
-            system: VEYMAR_SYSTEM_PROMPT,
+            system,
+            tools,
+            stopWhen: stepCountIs(50),
             messages: await convertToModelMessages(messages),
           });
 
