@@ -462,9 +462,31 @@ function ChatInner({
                   </div>
                 ) : (
                   <MessageContent className="bg-primary text-primary-foreground">
-                    {m.parts.map((part, i) =>
-                      part.type === "text" ? <p key={i} className="whitespace-pre-wrap">{part.text}</p> : null,
-                    )}
+                    {m.parts.map((part, i) => {
+                      if (part.type === "text") {
+                        return <p key={i} className="whitespace-pre-wrap">{part.text}</p>;
+                      }
+                      if (part.type === "file") {
+                        const fp: any = part;
+                        if (fp.mediaType?.startsWith("image/")) {
+                          return (
+                            <img
+                              key={i}
+                              src={fp.url}
+                              alt={fp.filename ?? "adjunto"}
+                              className="mt-1 max-h-64 rounded-lg border border-primary-foreground/20"
+                            />
+                          );
+                        }
+                        return (
+                          <div key={i} className="mt-1 flex items-center gap-2 rounded-md bg-primary-foreground/10 px-2 py-1 text-xs">
+                            <FileText className="h-3.5 w-3.5" />
+                            <span className="truncate">{fp.filename ?? "archivo"}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </MessageContent>
                 )}
               </Message>
