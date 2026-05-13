@@ -143,7 +143,7 @@ function ChatInner({
   };
 
   const sendText = (text: string, fromVoice = false) => {
-    if (!text || isWorking) return;
+    if ((!text && attachments.length === 0) || isWorking) return;
     // Modo offline: responde localmente sin tocar la red.
     if (offlineMode) {
       const userId = `local-u-${Date.now()}`;
@@ -161,9 +161,42 @@ function ChatInner({
         : fromVoice
           ? `[Entrada por voz · Identidad desconocida] `
           : "";
-    void sendMessage({ text: prefix + text });
+    const files = attachments.length > 0 ? attachments : undefined;
+    void sendMessage({ text: prefix + text, files });
+    setAttachments([]);
     // Cachea la pregunta para futuras respuestas offline
-    rememberAnswer(text, "");
+    if (text) rememberAnswer(text, "");
+  };
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+
+  const onPickFiles = async (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    const next: FileUIPart[] = [];
+    for (const file of Array.from(list)) {
+      if (file.size > 18 * 1024 * 1024) {
+        toast.error(`${file.name} supera 18 MB.`);
+        continue;
+      }
+      try {
+        const url = await fileToDataUrl(file);
+        next.push({
+          type: "file",
+          mediaType: file.type || "application/octet-stream",
+          filename: file.name,
+          url,
+        });
+      } catch {
+        toast.error(`No pude leer ${file.name}`);
+      }
+    }
+    if (next.length) setAttachments((prev) => [...prev, ...next]);
   };
 
   const { listening, interim, supported, start, stop } = useSpeechRecognition({
