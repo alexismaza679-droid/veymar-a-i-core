@@ -354,7 +354,7 @@ function ChatInner({
         </div>
       </header>
 
-      <Conversation className="flex-1">
+      <Conversation className="relative z-10 flex-1">
         <ConversationContent className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
           {messages.length === 0 ? (
             <div className="space-y-6 py-8">
