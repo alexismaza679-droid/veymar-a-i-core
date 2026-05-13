@@ -20,6 +20,7 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
+import { ImageActions, CopyTextButton } from "@/components/message-actions";
 import { Button } from "@/components/ui/button";
 import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff } from "lucide-react";
 import { toast } from "sonner";
@@ -274,7 +275,16 @@ function ChatInner({
                   <div className="w-full max-w-none px-1 text-foreground space-y-3">
                     {m.parts.map((part, i) => {
                       if (part.type === "text") {
-                        return <MessageResponse key={i}>{part.text}</MessageResponse>;
+                        return (
+                          <div key={i} className="space-y-1">
+                            <MessageResponse>{part.text}</MessageResponse>
+                            {part.text?.trim() && (
+                              <div className="flex justify-start pt-1">
+                                <CopyTextButton text={part.text} />
+                              </div>
+                            )}
+                          </div>
+                        );
                       }
                       // Tool part rendering (AI SDK v5: type === `tool-${name}`)
                       const p: any = part;
@@ -289,6 +299,7 @@ function ChatInner({
                                   {out.prompt}
                                 </figcaption>
                               )}
+                              <ImageActions url={out.imageUrl} prompt={out.prompt} />
                             </figure>
                           );
                         }
