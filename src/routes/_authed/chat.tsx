@@ -276,7 +276,15 @@ function ChatInner({
   };
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="relative flex h-screen flex-col overflow-hidden">
+      {/* Fondo animado: logo VEYMAR flotando + ondas al hablar */}
+      <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
+        <VeymarLogo
+          className="h-[70vmin] w-[70vmin] opacity-[0.06] animate-veymar-float"
+          animated
+        />
+      </div>
+      <SpeakingWaves />
       <header className="glass relative z-10 flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <VeymarLogo className="h-10 w-10" />
