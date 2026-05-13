@@ -153,7 +153,7 @@ export const Route = createFileRoute("/api/chat")({
             system,
             tools,
             stopWhen: stepCountIs(50),
-            messages: await convertToModelMessages(messages),
+            messages: await convertToModelMessages(sanitized),
           });
 
           return result.toUIMessageStreamResponse({
