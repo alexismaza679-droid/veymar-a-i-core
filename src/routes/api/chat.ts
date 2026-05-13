@@ -8,28 +8,41 @@ import { createClient } from "@supabase/supabase-js";
 type ChatBody = { messages?: UIMessage[]; ownerName?: string | null };
 
 async function generateImageViaGateway(apiKey: string, prompt: string): Promise<string> {
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": apiKey,
-      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3.1-flash-image-preview",
-      messages: [{ role: "user", content: prompt }],
-      modalities: ["image", "text"],
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Image gateway error ${res.status}: ${await res.text()}`);
+  const models = [
+    "google/gemini-2.5-flash-image-preview", // Nano Banana — estable
+    "google/gemini-3.1-flash-image-preview", // Nano Banana 2 — fallback
+  ];
+  let lastErr = "";
+  for (const model of models) {
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Lovable-API-Key": apiKey,
+          "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+      if (!res.ok) {
+        lastErr = `Image gateway ${model} ${res.status}`;
+        continue;
+      }
+      const json: any = await res.json();
+      const img =
+        json?.choices?.[0]?.message?.images?.[0]?.image_url?.url ??
+        json?.choices?.[0]?.message?.images?.[0]?.url;
+      if (img) return img as string;
+      lastErr = `Sin imagen en respuesta de ${model}`;
+    } catch (e: any) {
+      lastErr = e?.message || String(e);
+    }
   }
-  const json: any = await res.json();
-  const img =
-    json?.choices?.[0]?.message?.images?.[0]?.image_url?.url ??
-    json?.choices?.[0]?.message?.images?.[0]?.url;
-  if (!img) throw new Error("Imagen no recibida del proveedor.");
-  return img as string;
+  throw new Error(lastErr || "No se pudo generar la imagen");
 }
 
 export const Route = createFileRoute("/api/chat")({
