@@ -246,11 +246,30 @@ function ChatInner({
           <div>
             <div className="text-sm font-light tracking-[0.3em] text-glow">VEYMAR A.I.</div>
             <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-              {isWorking ? "Procesando..." : "En línea · Núcleo activo"}
+              {offlineMode
+                ? "Modo offline · Núcleo local"
+                : isWorking
+                  ? "Procesando..."
+                  : "En línea · Núcleo activo"}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => {
+              setOfflineMode((v) => !v);
+              toast.success(!offlineMode ? "Modo offline activado." : "Modo en línea restablecido.");
+            }}
+            title={offlineMode ? "Desactivar modo offline" : "Activar modo offline (sin internet)"}
+          >
+            {offlineMode ? (
+              <WifiOff className="h-4 w-4 text-amber-400" />
+            ) : (
+              <Wifi className="h-4 w-4 text-primary" />
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="icon-sm"
