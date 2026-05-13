@@ -123,8 +123,8 @@ export function speak(text: string, lang = "es-ES") {
   if (!clean) return;
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = lang;
-  u.rate = 1.18; // un poco más rápido, más humano
-  u.pitch = 0.92; // tono ligeramente grave (masculino)
+  u.rate = 1.32; // más rápido, ágil
+  u.pitch = 0.82; // tono grave masculino
   u.volume = 1;
   const voices = synth.getVoices();
   // Prioridad: voz masculina en español
