@@ -123,19 +123,25 @@ export function speak(text: string, lang = "es-ES") {
   if (!clean) return;
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = lang;
-  u.rate = 1;
-  u.pitch = 1;
+  u.rate = 1.18; // un poco más rápido, más humano
+  u.pitch = 0.92; // tono ligeramente grave (masculino)
+  u.volume = 1;
   const voices = synth.getVoices();
+  // Prioridad: voz masculina en español
+  const isMale = (v: SpeechSynthesisVoice) =>
+    /male|hombre|jorge|diego|carlos|enrique|miguel|pablo|juan|google español/i.test(v.name) &&
+    !/female|mujer|female/i.test(v.name);
   const preferred =
-    voices.find((v) => /es/i.test(v.lang) && /male|hombre|jorge|diego/i.test(v.name)) ||
-    voices.find((v) => /es/i.test(v.lang)) ||
+    voices.find((v) => /^es/i.test(v.lang) && isMale(v)) ||
+    voices.find((v) => /^es-MX|es-US|es-419/i.test(v.lang)) ||
+    voices.find((v) => /^es/i.test(v.lang)) ||
     voices[0];
   if (preferred) u.voice = preferred;
   synth.speak(u);
 }
 
-// Wake word matcher: "hey/ey/oye veymar ..."
-const WAKE_RE = /\b(?:hey|ey|oye|hola)\s+veymar\b[\s,:.-]*/i;
+// Wake word matcher: "hey/ey/oye/hola/okey veymar ..." (también capta "beymar/weimar")
+const WAKE_RE = /\b(?:hey|ey|oye|hola|okey|ok)\s+(?:veymar|beymar|weimar|veimar|vey\s*mar)\b[\s,:.\-]*/i;
 export function extractWakeCommand(text: string): string | null {
   const m = text.match(WAKE_RE);
   if (!m) return null;

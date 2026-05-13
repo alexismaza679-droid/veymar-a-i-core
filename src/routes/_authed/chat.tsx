@@ -262,12 +262,49 @@ function ChatInner({
       <Conversation className="flex-1">
         <ConversationContent className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
           {messages.length === 0 ? (
-            <ConversationEmptyState
-              icon={<VeymarLogo className="h-28 w-28 animate-veymar-pulse" />}
-              title="A su servicio."
-              description="Soy VEYMAR. Pregunte, ordene o delegue. Estoy preparado para asistir, programar, analizar y anticipar."
-              className="min-h-[60vh]"
-            />
+            <div className="space-y-6 py-8">
+              <ConversationEmptyState
+                icon={<VeymarLogo className="h-28 w-28 animate-veymar-pulse" />}
+                title="A su servicio."
+                description="Soy VEYMAR. Pregunte, ordene o delegue. Estoy preparado para asistir, programar, analizar y anticipar."
+                className="min-h-[30vh]"
+              />
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="glass panel-glow rounded-xl p-4">
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-primary mb-2">Núcleo multi-agente</div>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• Analista — interpreta intención</li>
+                    <li>• Estratega — elige enfoque y herramientas</li>
+                    <li>• Investigador — reúne hechos</li>
+                    <li>• Redactor — responde como VEYMAR</li>
+                  </ul>
+                </div>
+                <div className="glass panel-glow rounded-xl p-4">
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-primary mb-2">Comandos por voz</div>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• "Hey VEYMAR, ¿qué hora es?"</li>
+                    <li>• "Hey VEYMAR, resume qué es la biología"</li>
+                    <li>• "Hey VEYMAR, genera una imagen de…"</li>
+                    <li>• Activa el modo escucha con el ícono <Ear className="inline h-3 w-3" /></li>
+                  </ul>
+                </div>
+                <div className="glass panel-glow rounded-xl p-4">
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-primary mb-2">Memoria persistente</div>
+                  <p className="text-xs text-muted-foreground">
+                    Recuerdo toda nuestra conversación entre sesiones. Use el ícono <Trash2 className="inline h-3 w-3" /> para reiniciar mi memoria, o <UserCog className="inline h-3 w-3" /> para registrar su perfil de voz.
+                  </p>
+                </div>
+                <div className="glass panel-glow rounded-xl p-4">
+                  <div className="text-[10px] uppercase tracking-[0.3em] text-primary mb-2">Capacidades activas</div>
+                  <ul className="text-xs text-muted-foreground space-y-1">
+                    <li>• Reloj y fecha en tiempo real</li>
+                    <li>• Generación de imágenes (Nano Banana 2)</li>
+                    <li>• Voz masculina, fluida y natural</li>
+                    <li>• Modelo optimizado: rápido y bajo en datos</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
           ) : (
             messages.map((m) => (
               <Message key={m.id} from={m.role}>
