@@ -104,8 +104,8 @@ export const Route = createFileRoute("/api/chat")({
           }
 
           const gateway = createLovableAiGatewayProvider(apiKey);
-          // Modelo estable, rápido y económico en datos
-          const model = gateway("google/gemini-2.5-flash");
+          // Modelo rápido y bajo en datos
+          const model = gateway("google/gemini-2.5-flash-lite");
 
           const tools = {
             getCurrentTime: tool({
