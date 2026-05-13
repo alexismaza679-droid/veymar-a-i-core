@@ -123,13 +123,34 @@ function ChatInner({
 
   const [voiceOutput, setVoiceOutput] = useState(true);
   const [wakeMode, setWakeMode] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
   const [owner, setOwner] = useState<string | null>(() => getVoiceOwner());
   const lastSpokenRef = useRef<string | null>(null);
 
   const isWorking = status === "submitted" || status === "streaming";
 
+  const pushLocalAssistant = (text: string) => {
+    const id = `local-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id, role: "assistant", parts: [{ type: "text", text }] } as UIMessage,
+    ]);
+    if (voiceOutput) speak(text);
+  };
+
   const sendText = (text: string, fromVoice = false) => {
     if (!text || isWorking) return;
+    // Modo offline: responde localmente sin tocar la red.
+    if (offlineMode) {
+      const userId = `local-u-${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        { id: userId, role: "user", parts: [{ type: "text", text }] } as UIMessage,
+      ]);
+      const reply = offlineRespond(text, owner) ?? offlineFallbackMessage();
+      setTimeout(() => pushLocalAssistant(reply), 200);
+      return;
+    }
     const prefix =
       fromVoice && owner
         ? `[Entrada por voz · Identidad reconocida: ${owner}] `
@@ -137,6 +158,8 @@ function ChatInner({
           ? `[Entrada por voz · Identidad desconocida] `
           : "";
     void sendMessage({ text: prefix + text });
+    // Cachea la pregunta para futuras respuestas offline
+    rememberAnswer(text, "");
   };
 
   const { listening, interim, supported, start, stop } = useSpeechRecognition({
