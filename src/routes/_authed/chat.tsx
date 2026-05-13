@@ -482,8 +482,38 @@ function ChatInner({
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6">
+      <div className="relative z-10 mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6">
         <PromptInput onSubmit={handleSubmit} className="glass panel-glow rounded-2xl">
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-3 pt-3">
+              {attachments.map((a, idx) => {
+                const isImg = a.mediaType.startsWith("image/");
+                const isAudio = a.mediaType.startsWith("audio/");
+                const Icon = isImg ? ImageIcon : isAudio ? Music : FileText;
+                return (
+                  <div
+                    key={idx}
+                    className="group relative flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 px-2 py-1 text-xs"
+                  >
+                    {isImg ? (
+                      <img src={a.url} alt={a.filename} className="h-8 w-8 rounded object-cover" />
+                    ) : (
+                      <Icon className="h-4 w-4 text-primary" />
+                    )}
+                    <span className="max-w-[140px] truncate">{a.filename}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachments((p) => p.filter((_, i) => i !== idx))}
+                      className="rounded p-0.5 hover:bg-destructive/20"
+                      title="Quitar"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <PromptInputTextarea
             placeholder="Hable con VEYMAR..."
             autoFocus
@@ -503,6 +533,26 @@ function ChatInner({
                   {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </Button>
               ) : null}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf,audio/*"
+                className="hidden"
+                onChange={(e) => {
+                  void onPickFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => fileInputRef.current?.click()}
+                title="Adjuntar imagen, PDF o audio"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               {interim ? (
                 <span className="text-xs italic text-muted-foreground truncate max-w-[200px]">
                   «{interim}»
@@ -517,7 +567,7 @@ function ChatInner({
           </PromptInputFooter>
         </PromptInput>
         <p className="mt-2 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-          VEYMAR A.I. · Asistencia inteligente de nueva generación
+          VEYMAR A.I. · Asistencia inteligente de nueva generación · Adjunta imágenes, PDF o audio
         </p>
       </div>
     </div>
