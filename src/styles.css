@@ -145,4 +145,14 @@
   .animate-veymar-pulse { animation: veymar-pulse 3.5s ease-in-out infinite; }
   @keyframes veymar-spin-slow { to { transform: rotate(360deg); } }
   .animate-veymar-spin { animation: veymar-spin-slow 24s linear infinite; }
+  @keyframes veymar-float {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50% { transform: translateY(-12px) scale(1.03); }
+  }
+  .animate-veymar-float { animation: veymar-float 8s ease-in-out infinite; }
+  @keyframes wave-bar {
+    0%, 100% { transform: scaleY(0.25); }
+    50% { transform: scaleY(1); }
+  }
+  .wave-bar { animation: wave-bar 0.9s ease-in-out infinite; transform-origin: center; }
 }
