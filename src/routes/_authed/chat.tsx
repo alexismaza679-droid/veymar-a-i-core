@@ -186,9 +186,8 @@ function ChatInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wakeMode]);
 
-  // Speak last assistant message when streaming finishes
+  // Speak last assistant message when streaming finishes + cache for offline use
   useEffect(() => {
-    if (!voiceOutput) return;
     if (status !== "ready") return;
     const last = messages[messages.length - 1];
     if (!last || last.role !== "assistant") return;
@@ -198,7 +197,15 @@ function ChatInner({
       .trim();
     if (!text || lastSpokenRef.current === last.id) return;
     lastSpokenRef.current = last.id;
-    speak(text);
+    // Cachea pregunta→respuesta para modo offline
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    const userText = lastUser?.parts
+      .map((p: any) => (p.type === "text" ? p.text : ""))
+      .join(" ")
+      .replace(/\[Entrada por voz[^\]]*\]\s*/g, "")
+      .trim();
+    if (userText) rememberAnswer(userText, text);
+    if (voiceOutput) speak(text);
   }, [status, messages, voiceOutput]);
 
   const handleSubmit = (msg: PromptInputMessage) => {
