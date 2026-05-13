@@ -77,11 +77,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "VEYMAR A.I. — Asistente de nueva generación" },
       { name: "description", content: "VEYMAR A.I., una inteligencia artificial avanzada inspirada en J.A.R.V.I.S. Asistente personal, estratega y compañero tecnológico." },
       { name: "author", content: "VEYMAR" },
-      { property: "og:title", content: "VEYMAR A.I." },
-      { property: "og:description", content: "Inteligencia artificial avanzada de nueva generación." },
+      { property: "og:title", content: "VEYMAR A.I. — Asistente de nueva generación" },
+      { property: "og:description", content: "VEYMAR A.I., una inteligencia artificial avanzada inspirada en J.A.R.V.I.S. Asistente personal, estratega y compañero tecnológico." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "VEYMAR A.I. — Asistente de nueva generación" },
+      { name: "twitter:description", content: "VEYMAR A.I., una inteligencia artificial avanzada inspirada en J.A.R.V.I.S. Asistente personal, estratega y compañero tecnológico." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/4a8d4ad1-889c-4049-9f00-b935771838d3" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/4a8d4ad1-889c-4049-9f00-b935771838d3" },
     ],
     links: [
       {
