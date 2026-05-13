@@ -22,7 +22,7 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
 import { ImageActions, CopyTextButton } from "@/components/message-actions";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff } from "lucide-react";
+import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff, WifiOff, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSpeechRecognition,
@@ -31,6 +31,7 @@ import {
   setVoiceOwner,
   extractWakeCommand,
 } from "@/hooks/use-voice";
+import { offlineRespond, offlineFallbackMessage, rememberAnswer } from "@/lib/offline-brain";
 
 export const Route = createFileRoute("/_authed/chat")({
   component: ChatPage,
