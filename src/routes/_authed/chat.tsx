@@ -127,6 +127,8 @@ function ChatInner({
   const [wakeMode, setWakeMode] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
   const [owner, setOwner] = useState<string | null>(() => getVoiceOwner());
+  const [attachments, setAttachments] = useState<FileUIPart[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const lastSpokenRef = useRef<string | null>(null);
 
   const isWorking = status === "submitted" || status === "streaming";
