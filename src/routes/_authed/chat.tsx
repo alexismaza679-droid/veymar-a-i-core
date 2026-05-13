@@ -22,7 +22,7 @@ import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
 import { ImageActions, CopyTextButton } from "@/components/message-actions";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff } from "lucide-react";
+import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff, WifiOff, Wifi } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSpeechRecognition,
@@ -31,6 +31,7 @@ import {
   setVoiceOwner,
   extractWakeCommand,
 } from "@/hooks/use-voice";
+import { offlineRespond, offlineFallbackMessage, rememberAnswer } from "@/lib/offline-brain";
 
 export const Route = createFileRoute("/_authed/chat")({
   component: ChatPage,
@@ -122,13 +123,34 @@ function ChatInner({
 
   const [voiceOutput, setVoiceOutput] = useState(true);
   const [wakeMode, setWakeMode] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
   const [owner, setOwner] = useState<string | null>(() => getVoiceOwner());
   const lastSpokenRef = useRef<string | null>(null);
 
   const isWorking = status === "submitted" || status === "streaming";
 
+  const pushLocalAssistant = (text: string) => {
+    const id = `local-${Date.now()}`;
+    setMessages((prev) => [
+      ...prev,
+      { id, role: "assistant", parts: [{ type: "text", text }] } as UIMessage,
+    ]);
+    if (voiceOutput) speak(text);
+  };
+
   const sendText = (text: string, fromVoice = false) => {
     if (!text || isWorking) return;
+    // Modo offline: responde localmente sin tocar la red.
+    if (offlineMode) {
+      const userId = `local-u-${Date.now()}`;
+      setMessages((prev) => [
+        ...prev,
+        { id: userId, role: "user", parts: [{ type: "text", text }] } as UIMessage,
+      ]);
+      const reply = offlineRespond(text, owner) ?? offlineFallbackMessage();
+      setTimeout(() => pushLocalAssistant(reply), 200);
+      return;
+    }
     const prefix =
       fromVoice && owner
         ? `[Entrada por voz · Identidad reconocida: ${owner}] `
@@ -136,6 +158,8 @@ function ChatInner({
           ? `[Entrada por voz · Identidad desconocida] `
           : "";
     void sendMessage({ text: prefix + text });
+    // Cachea la pregunta para futuras respuestas offline
+    rememberAnswer(text, "");
   };
 
   const { listening, interim, supported, start, stop } = useSpeechRecognition({
@@ -162,9 +186,8 @@ function ChatInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wakeMode]);
 
-  // Speak last assistant message when streaming finishes
+  // Speak last assistant message when streaming finishes + cache for offline use
   useEffect(() => {
-    if (!voiceOutput) return;
     if (status !== "ready") return;
     const last = messages[messages.length - 1];
     if (!last || last.role !== "assistant") return;
@@ -174,7 +197,15 @@ function ChatInner({
       .trim();
     if (!text || lastSpokenRef.current === last.id) return;
     lastSpokenRef.current = last.id;
-    speak(text);
+    // Cachea pregunta→respuesta para modo offline
+    const lastUser = [...messages].reverse().find((m) => m.role === "user");
+    const userText = lastUser?.parts
+      .map((p: any) => (p.type === "text" ? p.text : ""))
+      .join(" ")
+      .replace(/\[Entrada por voz[^\]]*\]\s*/g, "")
+      .trim();
+    if (userText) rememberAnswer(userText, text);
+    if (voiceOutput) speak(text);
   }, [status, messages, voiceOutput]);
 
   const handleSubmit = (msg: PromptInputMessage) => {
@@ -215,11 +246,30 @@ function ChatInner({
           <div>
             <div className="text-sm font-light tracking-[0.3em] text-glow">VEYMAR A.I.</div>
             <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-              {isWorking ? "Procesando..." : "En línea · Núcleo activo"}
+              {offlineMode
+                ? "Modo offline · Núcleo local"
+                : isWorking
+                  ? "Procesando..."
+                  : "En línea · Núcleo activo"}
             </div>
           </div>
         </div>
         <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            onClick={() => {
+              setOfflineMode((v) => !v);
+              toast.success(!offlineMode ? "Modo offline activado." : "Modo en línea restablecido.");
+            }}
+            title={offlineMode ? "Desactivar modo offline" : "Activar modo offline (sin internet)"}
+          >
+            {offlineMode ? (
+              <WifiOff className="h-4 w-4 text-amber-400" />
+            ) : (
+              <Wifi className="h-4 w-4 text-primary" />
+            )}
+          </Button>
           <Button
             variant="ghost"
             size="icon-sm"

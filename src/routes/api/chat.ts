@@ -61,6 +61,26 @@ export const Route = createFileRoute("/api/chat")({
 
           const { messages = [], ownerName } = (await request.json()) as ChatBody;
 
+          // Sanitiza historial: quita data URLs gigantes de imágenes generadas
+          // y limita a los últimos 30 turnos para evitar saturar el contexto.
+          const sanitized = messages.slice(-30).map((m) => {
+            if (!Array.isArray((m as any).parts)) return m;
+            const parts = (m as any).parts.map((p: any) => {
+              if (p?.type === "tool-generateImage" && p?.output?.imageUrl) {
+                return {
+                  ...p,
+                  output: {
+                    ok: p.output.ok,
+                    prompt: p.output.prompt,
+                    imageUrl: "[imagen generada previamente]",
+                  },
+                };
+              }
+              return p;
+            });
+            return { ...m, parts };
+          });
+
           const lastUser = [...messages].reverse().find((m) => m.role === "user");
           if (lastUser) {
             await supabase.from("messages").insert({
@@ -133,7 +153,7 @@ export const Route = createFileRoute("/api/chat")({
             system,
             tools,
             stopWhen: stepCountIs(50),
-            messages: await convertToModelMessages(messages),
+            messages: await convertToModelMessages(sanitized),
           });
 
           return result.toUIMessageStreamResponse({
