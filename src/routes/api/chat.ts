@@ -74,10 +74,13 @@ export const Route = createFileRoute("/api/chat")({
 
           const { messages = [], ownerName } = (await request.json()) as ChatBody;
 
-          // Sanitiza historial: quita data URLs gigantes de imágenes generadas
-          // y limita a los últimos 30 turnos para evitar saturar el contexto.
-          const sanitized = messages.slice(-30).map((m) => {
+          // Sanitiza historial: quita data URLs gigantes (imágenes generadas
+          // y archivos adjuntos antiguos) y limita a los últimos 20 turnos.
+          const trimmed = messages.slice(-20);
+          const lastIdx = trimmed.length - 1;
+          const sanitized = trimmed.map((m, idx) => {
             if (!Array.isArray((m as any).parts)) return m;
+            const isLast = idx === lastIdx;
             const parts = (m as any).parts.map((p: any) => {
               if (p?.type === "tool-generateImage" && p?.output?.imageUrl) {
                 return {
@@ -87,6 +90,13 @@ export const Route = createFileRoute("/api/chat")({
                     prompt: p.output.prompt,
                     imageUrl: "[imagen generada previamente]",
                   },
+                };
+              }
+              // Mantén los archivos adjuntos sólo en el último mensaje del usuario.
+              if (p?.type === "file" && !isLast) {
+                return {
+                  type: "text",
+                  text: `[adjunto previo: ${p.filename ?? p.mediaType ?? "archivo"}]`,
                 };
               }
               return p;
