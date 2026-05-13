@@ -8,28 +8,41 @@ import { createClient } from "@supabase/supabase-js";
 type ChatBody = { messages?: UIMessage[]; ownerName?: string | null };
 
 async function generateImageViaGateway(apiKey: string, prompt: string): Promise<string> {
-  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Lovable-API-Key": apiKey,
-      "X-Lovable-AIG-SDK": "vercel-ai-sdk",
-    },
-    body: JSON.stringify({
-      model: "google/gemini-3.1-flash-image-preview",
-      messages: [{ role: "user", content: prompt }],
-      modalities: ["image", "text"],
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Image gateway error ${res.status}: ${await res.text()}`);
+  const models = [
+    "google/gemini-2.5-flash-image-preview", // Nano Banana — estable
+    "google/gemini-3.1-flash-image-preview", // Nano Banana 2 — fallback
+  ];
+  let lastErr = "";
+  for (const model of models) {
+    try {
+      const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Lovable-API-Key": apiKey,
+          "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: prompt }],
+          modalities: ["image", "text"],
+        }),
+      });
+      if (!res.ok) {
+        lastErr = `Image gateway ${model} ${res.status}`;
+        continue;
+      }
+      const json: any = await res.json();
+      const img =
+        json?.choices?.[0]?.message?.images?.[0]?.image_url?.url ??
+        json?.choices?.[0]?.message?.images?.[0]?.url;
+      if (img) return img as string;
+      lastErr = `Sin imagen en respuesta de ${model}`;
+    } catch (e: any) {
+      lastErr = e?.message || String(e);
+    }
   }
-  const json: any = await res.json();
-  const img =
-    json?.choices?.[0]?.message?.images?.[0]?.image_url?.url ??
-    json?.choices?.[0]?.message?.images?.[0]?.url;
-  if (!img) throw new Error("Imagen no recibida del proveedor.");
-  return img as string;
+  throw new Error(lastErr || "No se pudo generar la imagen");
 }
 
 export const Route = createFileRoute("/api/chat")({
@@ -61,10 +74,13 @@ export const Route = createFileRoute("/api/chat")({
 
           const { messages = [], ownerName } = (await request.json()) as ChatBody;
 
-          // Sanitiza historial: quita data URLs gigantes de imágenes generadas
-          // y limita a los últimos 30 turnos para evitar saturar el contexto.
-          const sanitized = messages.slice(-30).map((m) => {
+          // Sanitiza historial: quita data URLs gigantes (imágenes generadas
+          // y archivos adjuntos antiguos) y limita a los últimos 20 turnos.
+          const trimmed = messages.slice(-20);
+          const lastIdx = trimmed.length - 1;
+          const sanitized = trimmed.map((m, idx) => {
             if (!Array.isArray((m as any).parts)) return m;
+            const isLast = idx === lastIdx;
             const parts = (m as any).parts.map((p: any) => {
               if (p?.type === "tool-generateImage" && p?.output?.imageUrl) {
                 return {
@@ -74,6 +90,13 @@ export const Route = createFileRoute("/api/chat")({
                     prompt: p.output.prompt,
                     imageUrl: "[imagen generada previamente]",
                   },
+                };
+              }
+              // Mantén los archivos adjuntos sólo en el último mensaje del usuario.
+              if (p?.type === "file" && !isLast) {
+                return {
+                  type: "text",
+                  text: `[adjunto previo: ${p.filename ?? p.mediaType ?? "archivo"}]`,
                 };
               }
               return p;
@@ -91,8 +114,8 @@ export const Route = createFileRoute("/api/chat")({
           }
 
           const gateway = createLovableAiGatewayProvider(apiKey);
-          // Modelo estable, rápido y económico en datos
-          const model = gateway("google/gemini-2.5-flash");
+          // Modelo rápido, multimodal y eficiente en datos
+          const model = gateway("google/gemini-3-flash-preview");
 
           const tools = {
             getCurrentTime: tool({

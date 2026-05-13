@@ -21,8 +21,9 @@ import {
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
 import { ImageActions, CopyTextButton } from "@/components/message-actions";
+import { SpeakingWaves } from "@/components/speaking-waves";
 import { Button } from "@/components/ui/button";
-import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff, WifiOff, Wifi } from "lucide-react";
+import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff, WifiOff, Wifi, Paperclip, X, FileText, Music, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSpeechRecognition,
@@ -32,6 +33,7 @@ import {
   extractWakeCommand,
 } from "@/hooks/use-voice";
 import { offlineRespond, offlineFallbackMessage, rememberAnswer } from "@/lib/offline-brain";
+import type { FileUIPart } from "ai";
 
 export const Route = createFileRoute("/_authed/chat")({
   component: ChatPage,
@@ -125,6 +127,8 @@ function ChatInner({
   const [wakeMode, setWakeMode] = useState(false);
   const [offlineMode, setOfflineMode] = useState(false);
   const [owner, setOwner] = useState<string | null>(() => getVoiceOwner());
+  const [attachments, setAttachments] = useState<FileUIPart[]>([]);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const lastSpokenRef = useRef<string | null>(null);
 
   const isWorking = status === "submitted" || status === "streaming";
@@ -139,7 +143,7 @@ function ChatInner({
   };
 
   const sendText = (text: string, fromVoice = false) => {
-    if (!text || isWorking) return;
+    if ((!text && attachments.length === 0) || isWorking) return;
     // Modo offline: responde localmente sin tocar la red.
     if (offlineMode) {
       const userId = `local-u-${Date.now()}`;
@@ -157,9 +161,42 @@ function ChatInner({
         : fromVoice
           ? `[Entrada por voz · Identidad desconocida] `
           : "";
-    void sendMessage({ text: prefix + text });
+    const files = attachments.length > 0 ? attachments : undefined;
+    void sendMessage({ text: prefix + text, files });
+    setAttachments([]);
     // Cachea la pregunta para futuras respuestas offline
-    rememberAnswer(text, "");
+    if (text) rememberAnswer(text, "");
+  };
+
+  const fileToDataUrl = (file: File) =>
+    new Promise<string>((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result as string);
+      r.onerror = () => reject(r.error);
+      r.readAsDataURL(file);
+    });
+
+  const onPickFiles = async (list: FileList | null) => {
+    if (!list || list.length === 0) return;
+    const next: FileUIPart[] = [];
+    for (const file of Array.from(list)) {
+      if (file.size > 18 * 1024 * 1024) {
+        toast.error(`${file.name} supera 18 MB.`);
+        continue;
+      }
+      try {
+        const url = await fileToDataUrl(file);
+        next.push({
+          type: "file",
+          mediaType: file.type || "application/octet-stream",
+          filename: file.name,
+          url,
+        });
+      } catch {
+        toast.error(`No pude leer ${file.name}`);
+      }
+    }
+    if (next.length) setAttachments((prev) => [...prev, ...next]);
   };
 
   const { listening, interim, supported, start, stop } = useSpeechRecognition({
@@ -239,7 +276,15 @@ function ChatInner({
   };
 
   return (
-    <div className="flex h-screen flex-col">
+    <div className="relative flex h-screen flex-col overflow-hidden">
+      {/* Fondo animado: logo VEYMAR flotando + ondas al hablar */}
+      <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
+        <VeymarLogo
+          className="h-[70vmin] w-[70vmin] opacity-[0.06] animate-veymar-float"
+          animated
+        />
+      </div>
+      <SpeakingWaves />
       <header className="glass relative z-10 flex items-center justify-between border-b border-border/40 px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
           <VeymarLogo className="h-10 w-10" />
@@ -309,7 +354,7 @@ function ChatInner({
         </div>
       </header>
 
-      <Conversation className="flex-1">
+      <Conversation className="relative z-10 flex-1">
         <ConversationContent className="mx-auto w-full max-w-3xl px-4 py-6 sm:px-6">
           {messages.length === 0 ? (
             <div className="space-y-6 py-8">
@@ -417,9 +462,31 @@ function ChatInner({
                   </div>
                 ) : (
                   <MessageContent className="bg-primary text-primary-foreground">
-                    {m.parts.map((part, i) =>
-                      part.type === "text" ? <p key={i} className="whitespace-pre-wrap">{part.text}</p> : null,
-                    )}
+                    {m.parts.map((part, i) => {
+                      if (part.type === "text") {
+                        return <p key={i} className="whitespace-pre-wrap">{part.text}</p>;
+                      }
+                      if (part.type === "file") {
+                        const fp: any = part;
+                        if (fp.mediaType?.startsWith("image/")) {
+                          return (
+                            <img
+                              key={i}
+                              src={fp.url}
+                              alt={fp.filename ?? "adjunto"}
+                              className="mt-1 max-h-64 rounded-lg border border-primary-foreground/20"
+                            />
+                          );
+                        }
+                        return (
+                          <div key={i} className="mt-1 flex items-center gap-2 rounded-md bg-primary-foreground/10 px-2 py-1 text-xs">
+                            <FileText className="h-3.5 w-3.5" />
+                            <span className="truncate">{fp.filename ?? "archivo"}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
                   </MessageContent>
                 )}
               </Message>
@@ -437,8 +504,38 @@ function ChatInner({
         <ConversationScrollButton />
       </Conversation>
 
-      <div className="mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6">
+      <div className="relative z-10 mx-auto w-full max-w-3xl px-4 pb-6 sm:px-6">
         <PromptInput onSubmit={handleSubmit} className="glass panel-glow rounded-2xl">
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 px-3 pt-3">
+              {attachments.map((a, idx) => {
+                const isImg = a.mediaType.startsWith("image/");
+                const isAudio = a.mediaType.startsWith("audio/");
+                const Icon = isImg ? ImageIcon : isAudio ? Music : FileText;
+                return (
+                  <div
+                    key={idx}
+                    className="group relative flex items-center gap-2 rounded-lg border border-border/40 bg-background/60 px-2 py-1 text-xs"
+                  >
+                    {isImg ? (
+                      <img src={a.url} alt={a.filename} className="h-8 w-8 rounded object-cover" />
+                    ) : (
+                      <Icon className="h-4 w-4 text-primary" />
+                    )}
+                    <span className="max-w-[140px] truncate">{a.filename}</span>
+                    <button
+                      type="button"
+                      onClick={() => setAttachments((p) => p.filter((_, i) => i !== idx))}
+                      className="rounded p-0.5 hover:bg-destructive/20"
+                      title="Quitar"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
           <PromptInputTextarea
             placeholder="Hable con VEYMAR..."
             autoFocus
@@ -458,6 +555,26 @@ function ChatInner({
                   {listening ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
                 </Button>
               ) : null}
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                accept="image/*,application/pdf,audio/*"
+                className="hidden"
+                onChange={(e) => {
+                  void onPickFiles(e.target.files);
+                  e.target.value = "";
+                }}
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => fileInputRef.current?.click()}
+                title="Adjuntar imagen, PDF o audio"
+              >
+                <Paperclip className="h-4 w-4" />
+              </Button>
               {interim ? (
                 <span className="text-xs italic text-muted-foreground truncate max-w-[200px]">
                   «{interim}»
@@ -472,7 +589,7 @@ function ChatInner({
           </PromptInputFooter>
         </PromptInput>
         <p className="mt-2 text-center text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-          VEYMAR A.I. · Asistencia inteligente de nueva generación
+          VEYMAR A.I. · Asistencia inteligente de nueva generación · Adjunta imágenes, PDF o audio
         </p>
       </div>
     </div>
