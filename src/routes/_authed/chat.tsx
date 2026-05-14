@@ -20,14 +20,17 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
-import { ImageActions, CopyTextButton } from "@/components/message-actions";
+import { ImageActions, CopyTextButton, SpeakAgainButton } from "@/components/message-actions";
 import { SpeakingWaves } from "@/components/speaking-waves";
+import { SettingsPanel } from "@/components/settings-panel";
+import { ModeSelector, type VeymarMode } from "@/components/mode-selector";
 import { Button } from "@/components/ui/button";
 import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff, WifiOff, Wifi, Paperclip, X, FileText, Music, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSpeechRecognition,
   speak,
+  stopSpeaking,
   getVoiceOwner,
   setVoiceOwner,
   extractWakeCommand,
@@ -44,6 +47,16 @@ function ChatPage() {
   const navigate = useNavigate();
   const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(null);
 
+  const [mode, setMode] = useState<VeymarMode>(() => {
+    if (typeof window === "undefined") return "pro";
+    return (localStorage.getItem("veymar.mode") as VeymarMode) || "pro";
+  });
+  const modeRef = useRef<VeymarMode>(mode);
+  modeRef.current = mode;
+  useEffect(() => {
+    try { localStorage.setItem("veymar.mode", mode); } catch {}
+  }, [mode]);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -58,6 +71,7 @@ function ChatPage() {
           try {
             const parsed = body ? JSON.parse(body as string) : {};
             parsed.ownerName = getVoiceOwner();
+            parsed.mode = modeRef.current;
             body = JSON.stringify(parsed);
           } catch {}
           return fetch(url, { ...init, headers, body });
@@ -99,7 +113,7 @@ function ChatPage() {
     );
   }
 
-  return <ChatInner initialMessages={initialMessages} transport={transport} onSignOut={async () => {
+  return <ChatInner initialMessages={initialMessages} transport={transport} mode={mode} setMode={setMode} onSignOut={async () => {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
   }} />;
@@ -108,10 +122,14 @@ function ChatPage() {
 function ChatInner({
   initialMessages,
   transport,
+  mode,
+  setMode,
   onSignOut,
 }: {
   initialMessages: UIMessage[];
   transport: DefaultChatTransport<UIMessage>;
+  mode: VeymarMode;
+  setMode: (m: VeymarMode) => void;
   onSignOut: () => void;
 }) {
   const { messages, sendMessage, status, setMessages } = useChat({
@@ -340,11 +358,18 @@ function ChatInner({
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => setVoiceOutput((v) => !v)}
-            title={voiceOutput ? "Silenciar voz" : "Activar voz"}
+            onClick={() => {
+              setVoiceOutput((v) => {
+                const next = !v;
+                if (!next) stopSpeaking();
+                return next;
+              });
+            }}
+            title={voiceOutput ? "Silenciar VEYMAR (corta la voz al instante)" : "Activar voz"}
           >
-            {voiceOutput ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
+            {voiceOutput ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-amber-400" />}
           </Button>
+          <SettingsPanel ownerName={owner} onConfigureOwner={configureOwner} />
           <Button variant="ghost" size="icon-sm" onClick={wipe} title="Reiniciar memoria">
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -411,8 +436,9 @@ function ChatInner({
                           <div key={i} className="space-y-1">
                             <MessageResponse>{part.text}</MessageResponse>
                             {part.text?.trim() && (
-                              <div className="flex justify-start pt-1">
+                              <div className="flex justify-start gap-1.5 pt-1">
                                 <CopyTextButton text={part.text} />
+                                <SpeakAgainButton text={part.text} />
                               </div>
                             )}
                           </div>
@@ -575,8 +601,9 @@ function ChatInner({
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
+              <ModeSelector mode={mode} onChange={setMode} />
               {interim ? (
-                <span className="text-xs italic text-muted-foreground truncate max-w-[200px]">
+                <span className="text-xs italic text-muted-foreground truncate max-w-[160px]">
                   «{interim}»
                 </span>
               ) : null}

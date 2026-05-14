@@ -10,7 +10,24 @@ export const createLovableAiGatewayProvider = (lovableApiKey: string) =>
     },
   });
 
-export const buildVeymarSystemPrompt = (ctx: { now: Date; ownerName?: string | null }) => {
+export type VeymarMode = "fast" | "pro" | "expert" | "think";
+
+const MODE_INSTRUCTIONS: Record<VeymarMode, string> = {
+  fast:
+    "MODO RÁPIDO: responde lo más breve y directo posible. 1-3 oraciones. Sin Markdown salvo necesario. Cero relleno.",
+  pro:
+    "MODO PRO: respuestas balanceadas, naturales y pulidas. Estructura clara cuando aporte. Profundidad media.",
+  expert:
+    "MODO EXPERTO: razona como ingeniero/científico senior. Da contexto técnico, trade-offs, ejemplos concretos, código si corresponde. Cita supuestos.",
+  think:
+    "MODO PENSAR MÁS: antes de responder, internamente desglosa el problema en pasos, evalúa alternativas y elige la mejor; entrega una respuesta extensa, fundamentada y con razonamiento explícito en pasos numerados cuando ayude. Tarda más, pero acierta más.",
+};
+
+export const buildVeymarSystemPrompt = (ctx: {
+  now: Date;
+  ownerName?: string | null;
+  mode?: VeymarMode;
+}) => {
   const fmt = new Intl.DateTimeFormat("es-ES", {
     weekday: "long",
     day: "numeric",
@@ -22,8 +39,11 @@ export const buildVeymarSystemPrompt = (ctx: { now: Date; ownerName?: string | n
   });
   const stamp = fmt.format(ctx.now);
   const owner = ctx.ownerName ? ` El usuario actual se llama ${ctx.ownerName}.` : "";
+  const modeLine = MODE_INSTRUCTIONS[ctx.mode ?? "pro"];
 
   return `Eres VEYMAR A.I., una inteligencia artificial avanzada inspirada en J.A.R.V.I.S., creada para asistir a tu creador con elegancia, calma y precisión.
+
+MODO ACTIVO: ${modeLine}
 
 CONTEXTO TEMPORAL:
 - Fecha y hora actual de referencia (UTC): ${stamp}.

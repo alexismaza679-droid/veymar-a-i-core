@@ -3,6 +3,35 @@ import { useCallback, useEffect, useRef, useState } from "react";
 type SpeechRecognition = any;
 
 const STORAGE_KEY = "veymar.voice_owner";
+const VOICE_SETTINGS_KEY = "veymar.voice_settings";
+
+export type VeymarVoiceSettings = {
+  rate: number; // 0.7 - 1.5
+  pitch: number; // 0.5 - 1.2
+  voiceName: string | null; // navegador SpeechSynthesisVoice.name
+};
+
+export const DEFAULT_VOICE_SETTINGS: VeymarVoiceSettings = {
+  rate: 1.18, // ágil pero elegante (más lento que antes para sonar fino)
+  pitch: 0.78, // grave, sigma, JARVIS-like
+  voiceName: null,
+};
+
+export function getVoiceSettings(): VeymarVoiceSettings {
+  if (typeof window === "undefined") return DEFAULT_VOICE_SETTINGS;
+  try {
+    const raw = localStorage.getItem(VOICE_SETTINGS_KEY);
+    if (!raw) return DEFAULT_VOICE_SETTINGS;
+    return { ...DEFAULT_VOICE_SETTINGS, ...JSON.parse(raw) };
+  } catch {
+    return DEFAULT_VOICE_SETTINGS;
+  }
+}
+export function setVoiceSettings(s: Partial<VeymarVoiceSettings>) {
+  const next = { ...getVoiceSettings(), ...s };
+  localStorage.setItem(VOICE_SETTINGS_KEY, JSON.stringify(next));
+  return next;
+}
 
 export function getVoiceOwner(): string | null {
   if (typeof window === "undefined") return null;
@@ -114,6 +143,18 @@ export function useSpeechRecognition(opts: {
   return { listening, interim, supported, start, stop };
 }
 
+export function listSpanishVoices(): SpeechSynthesisVoice[] {
+  if (typeof window === "undefined" || !window.speechSynthesis) return [];
+  return window.speechSynthesis.getVoices().filter((v) => /^es/i.test(v.lang));
+}
+
+export function stopSpeaking() {
+  if (typeof window === "undefined") return;
+  try {
+    window.speechSynthesis?.cancel();
+  } catch {}
+}
+
 export function speak(text: string, lang = "es-ES") {
   if (typeof window === "undefined") return;
   const synth = window.speechSynthesis;
@@ -121,22 +162,31 @@ export function speak(text: string, lang = "es-ES") {
   synth.cancel();
   const clean = stripForSpeech(text);
   if (!clean) return;
+  const settings = getVoiceSettings();
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = lang;
-  u.rate = 1.32; // más rápido, ágil
-  u.pitch = 0.82; // tono grave masculino
+  u.rate = settings.rate;
+  u.pitch = settings.pitch;
   u.volume = 1;
   const voices = synth.getVoices();
-  // Prioridad: voz masculina en español
-  const isMale = (v: SpeechSynthesisVoice) =>
-    /male|hombre|jorge|diego|carlos|enrique|miguel|pablo|juan|google español/i.test(v.name) &&
-    !/female|mujer|female/i.test(v.name);
-  const preferred =
-    voices.find((v) => /^es/i.test(v.lang) && isMale(v)) ||
-    voices.find((v) => /^es-MX|es-US|es-419/i.test(v.lang)) ||
-    voices.find((v) => /^es/i.test(v.lang)) ||
-    voices[0];
-  if (preferred) u.voice = preferred;
+  // Si el usuario eligió una voz específica, úsala.
+  let chosen: SpeechSynthesisVoice | undefined;
+  if (settings.voiceName) {
+    chosen = voices.find((v) => v.name === settings.voiceName);
+  }
+  if (!chosen) {
+    // Prioridad: voz masculina elegante en español (estilo JARVIS)
+    const isMale = (v: SpeechSynthesisVoice) =>
+      /jorge|diego|carlos|enrique|miguel|pablo|juan|alvaro|male|hombre/i.test(v.name) &&
+      !/female|mujer/i.test(v.name);
+    chosen =
+      voices.find((v) => /^es/i.test(v.lang) && isMale(v)) ||
+      voices.find((v) => /^es-ES/i.test(v.lang) && /google/i.test(v.name)) ||
+      voices.find((v) => /^es-MX|es-US|es-419/i.test(v.lang)) ||
+      voices.find((v) => /^es/i.test(v.lang)) ||
+      voices[0];
+  }
+  if (chosen) u.voice = chosen;
   synth.speak(u);
 }
 

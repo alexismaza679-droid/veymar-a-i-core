@@ -5,13 +5,52 @@ import { z } from "zod";
 import { createLovableAiGatewayProvider, buildVeymarSystemPrompt } from "@/lib/ai-gateway";
 import { createClient } from "@supabase/supabase-js";
 
-type ChatBody = { messages?: UIMessage[]; ownerName?: string | null };
+type ChatBody = { messages?: UIMessage[]; ownerName?: string | null; mode?: "fast" | "pro" | "expert" | "think" };
 
-async function generateImageViaGateway(apiKey: string, prompt: string): Promise<string> {
+async function enhanceImagePrompt(apiKey: string, userPrompt: string): Promise<string> {
+  // Reescribe el prompt del usuario en una descripción visual rica en inglés,
+  // siguiendo al pie de la letra lo pedido. Si falla, devuelve el original.
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You rewrite user image requests into a single, vivid, literal English image-generation prompt. RULES: Preserve EVERY explicit detail (subject, count, colors, clothing, pose, setting, mood, style). Do NOT add unrequested people, text, or objects. Add tasteful technical detail (lighting, lens, composition, art style) ONLY if it doesn't change meaning. Output ONLY the prompt, no preface, no quotes, max 90 words.",
+          },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
+    if (!res.ok) return userPrompt;
+    const json: any = await res.json();
+    const text: string = json?.choices?.[0]?.message?.content?.trim?.() ?? "";
+    return text || userPrompt;
+  } catch {
+    return userPrompt;
+  }
+}
+
+async function generateImageViaGateway(
+  apiKey: string,
+  prompt: string,
+  aspectRatio?: string,
+): Promise<string> {
   const models = [
-    "google/gemini-2.5-flash-image-preview", // Nano Banana — estable
-    "google/gemini-3.1-flash-image-preview", // Nano Banana 2 — fallback
+    "google/gemini-3.1-flash-image-preview", // Nano Banana 2 — más fiel al prompt
+    "google/gemini-2.5-flash-image-preview", // Nano Banana — fallback estable
   ];
+  const finalPrompt = aspectRatio
+    ? `${prompt}\n\nAspect ratio: ${aspectRatio}. High quality, sharp focus, follow the description literally.`
+    : `${prompt}\n\nHigh quality, sharp focus, follow the description literally.`;
   let lastErr = "";
   for (const model of models) {
     try {
@@ -24,7 +63,7 @@ async function generateImageViaGateway(apiKey: string, prompt: string): Promise<
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: "user", content: prompt }],
+          messages: [{ role: "user", content: finalPrompt }],
           modalities: ["image", "text"],
         }),
       });
@@ -72,7 +111,7 @@ export const Route = createFileRoute("/api/chat")({
           }
           const userId = claims.claims.sub as string;
 
-          const { messages = [], ownerName } = (await request.json()) as ChatBody;
+          const { messages = [], ownerName, mode = "pro" } = (await request.json()) as ChatBody;
 
           // Sanitiza historial: quita data URLs gigantes (imágenes generadas
           // y archivos adjuntos antiguos) y limita a los últimos 20 turnos.
@@ -152,16 +191,23 @@ export const Route = createFileRoute("/api/chat")({
             }),
             generateImage: tool({
               description:
-                "Genera una imagen a partir de una descripción en lenguaje natural. Úsala cuando el usuario pida crear, dibujar o imaginar una imagen.",
+                "Genera una imagen siguiendo AL PIE DE LA LETRA la descripción del usuario. Usa esta herramienta cuando pidan crear, dibujar, imaginar, generar o diseñar una imagen, foto, logo, escena, personaje, póster, etc. NO inventes elementos no pedidos. Si el usuario menciona aspecto/proporción (cuadrado, vertical, horizontal, 16:9, 9:16, etc.), pásalo en aspectRatio.",
               inputSchema: z.object({
                 prompt: z
                   .string()
-                  .describe("Descripción detallada y vívida de la imagen a generar, en inglés o español."),
+                  .describe(
+                    "Descripción literal y específica de lo que el usuario pidió. Conserva sujetos, cantidades, colores, ropa, ambiente, estilo y detalles concretos. Puede estar en español o inglés.",
+                  ),
+                aspectRatio: z
+                  .string()
+                  .optional()
+                  .describe("Proporción opcional: '1:1', '16:9', '9:16', '3:4', '4:3'. Si el usuario no la menciona, omitir."),
               }),
-              execute: async ({ prompt }) => {
+              execute: async ({ prompt, aspectRatio }) => {
                 try {
-                  const url = await generateImageViaGateway(apiKey, prompt);
-                  return { ok: true, imageUrl: url, prompt };
+                  const enhanced = await enhanceImagePrompt(apiKey, prompt);
+                  const url = await generateImageViaGateway(apiKey, enhanced, aspectRatio);
+                  return { ok: true, imageUrl: url, prompt: enhanced };
                 } catch (e: any) {
                   return { ok: false, error: e?.message ?? "Error generando imagen" };
                 }
@@ -169,7 +215,7 @@ export const Route = createFileRoute("/api/chat")({
             }),
           };
 
-          const system = buildVeymarSystemPrompt({ now: new Date(), ownerName });
+          const system = buildVeymarSystemPrompt({ now: new Date(), ownerName, mode });
 
           const result = streamText({
             model,

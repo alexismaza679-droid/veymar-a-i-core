@@ -6,8 +6,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Download, Copy, Check } from "lucide-react";
+import { MoreHorizontal, Download, Copy, Check, Volume2 } from "lucide-react";
 import { toast } from "sonner";
+import { speak, stopSpeaking } from "@/hooks/use-voice";
 
 export function ImageActions({ url, prompt }: { url: string; prompt?: string }) {
   const download = async () => {
@@ -68,6 +69,23 @@ export function CopyTextButton({ text }: { text: string }) {
       className="border border-border/40 rounded-md h-7 w-7"
     >
       {copied ? <Check className="h-3.5 w-3.5 text-primary" /> : <Copy className="h-3.5 w-3.5" />}
+    </Button>
+  );
+}
+
+export function SpeakAgainButton({ text }: { text: string }) {
+  return (
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      onClick={() => {
+        stopSpeaking();
+        speak(text);
+      }}
+      title="Volver a escuchar"
+      className="border border-border/40 rounded-md h-7 w-7"
+    >
+      <Volume2 className="h-3.5 w-3.5" />
     </Button>
   );
 }
