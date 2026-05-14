@@ -601,8 +601,9 @@ function ChatInner({
               >
                 <Paperclip className="h-4 w-4" />
               </Button>
+              <ModeSelector mode={mode} onChange={setMode} />
               {interim ? (
-                <span className="text-xs italic text-muted-foreground truncate max-w-[200px]">
+                <span className="text-xs italic text-muted-foreground truncate max-w-[160px]">
                   «{interim}»
                 </span>
               ) : null}
