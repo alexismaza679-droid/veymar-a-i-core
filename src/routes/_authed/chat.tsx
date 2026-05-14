@@ -358,11 +358,18 @@ function ChatInner({
           <Button
             variant="ghost"
             size="icon-sm"
-            onClick={() => setVoiceOutput((v) => !v)}
-            title={voiceOutput ? "Silenciar voz" : "Activar voz"}
+            onClick={() => {
+              setVoiceOutput((v) => {
+                const next = !v;
+                if (!next) stopSpeaking();
+                return next;
+              });
+            }}
+            title={voiceOutput ? "Silenciar VEYMAR (corta la voz al instante)" : "Activar voz"}
           >
-            {voiceOutput ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4" />}
+            {voiceOutput ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-amber-400" />}
           </Button>
+          <SettingsPanel ownerName={owner} onConfigureOwner={configureOwner} />
           <Button variant="ghost" size="icon-sm" onClick={wipe} title="Reiniciar memoria">
             <Trash2 className="h-4 w-4" />
           </Button>
@@ -429,8 +436,9 @@ function ChatInner({
                           <div key={i} className="space-y-1">
                             <MessageResponse>{part.text}</MessageResponse>
                             {part.text?.trim() && (
-                              <div className="flex justify-start pt-1">
+                              <div className="flex justify-start gap-1.5 pt-1">
                                 <CopyTextButton text={part.text} />
+                                <SpeakAgainButton text={part.text} />
                               </div>
                             )}
                           </div>
