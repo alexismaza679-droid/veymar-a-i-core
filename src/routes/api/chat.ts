@@ -5,13 +5,52 @@ import { z } from "zod";
 import { createLovableAiGatewayProvider, buildVeymarSystemPrompt } from "@/lib/ai-gateway";
 import { createClient } from "@supabase/supabase-js";
 
-type ChatBody = { messages?: UIMessage[]; ownerName?: string | null };
+type ChatBody = { messages?: UIMessage[]; ownerName?: string | null; mode?: "fast" | "pro" | "expert" | "think" };
 
-async function generateImageViaGateway(apiKey: string, prompt: string): Promise<string> {
+async function enhanceImagePrompt(apiKey: string, userPrompt: string): Promise<string> {
+  // Reescribe el prompt del usuario en una descripción visual rica en inglés,
+  // siguiendo al pie de la letra lo pedido. Si falla, devuelve el original.
+  try {
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "vercel-ai-sdk",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash-lite",
+        messages: [
+          {
+            role: "system",
+            content:
+              "You rewrite user image requests into a single, vivid, literal English image-generation prompt. RULES: Preserve EVERY explicit detail (subject, count, colors, clothing, pose, setting, mood, style). Do NOT add unrequested people, text, or objects. Add tasteful technical detail (lighting, lens, composition, art style) ONLY if it doesn't change meaning. Output ONLY the prompt, no preface, no quotes, max 90 words.",
+          },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
+    if (!res.ok) return userPrompt;
+    const json: any = await res.json();
+    const text: string = json?.choices?.[0]?.message?.content?.trim?.() ?? "";
+    return text || userPrompt;
+  } catch {
+    return userPrompt;
+  }
+}
+
+async function generateImageViaGateway(
+  apiKey: string,
+  prompt: string,
+  aspectRatio?: string,
+): Promise<string> {
   const models = [
-    "google/gemini-2.5-flash-image-preview", // Nano Banana — estable
-    "google/gemini-3.1-flash-image-preview", // Nano Banana 2 — fallback
+    "google/gemini-3.1-flash-image-preview", // Nano Banana 2 — más fiel al prompt
+    "google/gemini-2.5-flash-image-preview", // Nano Banana — fallback estable
   ];
+  const finalPrompt = aspectRatio
+    ? `${prompt}\n\nAspect ratio: ${aspectRatio}. High quality, sharp focus, follow the description literally.`
+    : `${prompt}\n\nHigh quality, sharp focus, follow the description literally.`;
   let lastErr = "";
   for (const model of models) {
     try {
@@ -24,7 +63,7 @@ async function generateImageViaGateway(apiKey: string, prompt: string): Promise<
         },
         body: JSON.stringify({
           model,
-          messages: [{ role: "user", content: prompt }],
+          messages: [{ role: "user", content: finalPrompt }],
           modalities: ["image", "text"],
         }),
       });
@@ -72,7 +111,7 @@ export const Route = createFileRoute("/api/chat")({
           }
           const userId = claims.claims.sub as string;
 
-          const { messages = [], ownerName } = (await request.json()) as ChatBody;
+          const { messages = [], ownerName, mode = "pro" } = (await request.json()) as ChatBody;
 
           // Sanitiza historial: quita data URLs gigantes (imágenes generadas
           // y archivos adjuntos antiguos) y limita a los últimos 20 turnos.
