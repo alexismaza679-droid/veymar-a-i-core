@@ -1,0 +1,160 @@
+import { useEffect, useState } from "react";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Label } from "@/components/ui/label";
+import { Settings2, Play } from "lucide-react";
+import {
+  DEFAULT_VOICE_SETTINGS,
+  getVoiceSettings,
+  listSpanishVoices,
+  setVoiceSettings,
+  speak,
+  stopSpeaking,
+} from "@/hooks/use-voice";
+
+export function SettingsPanel({
+  ownerName,
+  onConfigureOwner,
+}: {
+  ownerName: string | null;
+  onConfigureOwner: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [rate, setRate] = useState(DEFAULT_VOICE_SETTINGS.rate);
+  const [pitch, setPitch] = useState(DEFAULT_VOICE_SETTINGS.pitch);
+  const [voiceName, setVoice] = useState<string | null>(null);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+
+  useEffect(() => {
+    if (!open) return;
+    const s = getVoiceSettings();
+    setRate(s.rate);
+    setPitch(s.pitch);
+    setVoice(s.voiceName);
+    const load = () => setVoices(listSpanishVoices());
+    load();
+    window.speechSynthesis?.addEventListener?.("voiceschanged", load);
+    return () => window.speechSynthesis?.removeEventListener?.("voiceschanged", load);
+  }, [open]);
+
+  const persist = (next: Partial<{ rate: number; pitch: number; voiceName: string | null }>) => {
+    setVoiceSettings(next);
+  };
+
+  const test = () => {
+    stopSpeaking();
+    speak("A su servicio. Soy VEYMAR, una inteligencia diseñada para acompañarle con elegancia y precisión.");
+  };
+
+  const reset = () => {
+    setRate(DEFAULT_VOICE_SETTINGS.rate);
+    setPitch(DEFAULT_VOICE_SETTINGS.pitch);
+    setVoice(null);
+    setVoiceSettings({ ...DEFAULT_VOICE_SETTINGS });
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={setOpen}>
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="icon-sm" title="Personalizar VEYMAR">
+          <Settings2 className="h-4 w-4" />
+        </Button>
+      </SheetTrigger>
+      <SheetContent className="w-[340px] sm:w-[420px] overflow-y-auto">
+        <SheetHeader>
+          <SheetTitle className="tracking-[0.2em] text-glow">PERSONALIZAR VEYMAR</SheetTitle>
+          <SheetDescription>
+            Ajusta voz, identidad y comportamiento. Tus cambios se guardan al instante.
+          </SheetDescription>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-6">
+          <section className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-[0.3em] text-primary">Identidad</Label>
+            <div className="flex items-center justify-between rounded-md border border-border/40 p-3">
+              <div>
+                <div className="text-sm">Perfil de voz</div>
+                <div className="text-xs text-muted-foreground">
+                  {ownerName ? `Reconocido como: ${ownerName}` : "Sin perfil registrado"}
+                </div>
+              </div>
+              <Button variant="outline" size="sm" onClick={onConfigureOwner}>
+                Editar
+              </Button>
+            </div>
+          </section>
+
+          <section className="space-y-3">
+            <Label className="text-[10px] uppercase tracking-[0.3em] text-primary">Velocidad</Label>
+            <Slider
+              value={[rate]}
+              min={0.7}
+              max={1.5}
+              step={0.02}
+              onValueChange={(v) => {
+                setRate(v[0]);
+                persist({ rate: v[0] });
+              }}
+            />
+            <div className="text-[10px] text-muted-foreground">{rate.toFixed(2)}x</div>
+          </section>
+
+          <section className="space-y-3">
+            <Label className="text-[10px] uppercase tracking-[0.3em] text-primary">Tono (grave ↔ agudo)</Label>
+            <Slider
+              value={[pitch]}
+              min={0.5}
+              max={1.2}
+              step={0.02}
+              onValueChange={(v) => {
+                setPitch(v[0]);
+                persist({ pitch: v[0] });
+              }}
+            />
+            <div className="text-[10px] text-muted-foreground">{pitch.toFixed(2)}</div>
+          </section>
+
+          <section className="space-y-2">
+            <Label className="text-[10px] uppercase tracking-[0.3em] text-primary">Voz del sistema</Label>
+            <select
+              value={voiceName ?? ""}
+              onChange={(e) => {
+                const val = e.target.value || null;
+                setVoice(val);
+                persist({ voiceName: val });
+              }}
+              className="w-full rounded-md border border-border/40 bg-background px-2 py-2 text-sm"
+            >
+              <option value="">Auto (mejor voz masculina)</option>
+              {voices.map((v) => (
+                <option key={v.name} value={v.name}>
+                  {v.name} · {v.lang}
+                </option>
+              ))}
+            </select>
+            <p className="text-[10px] text-muted-foreground">
+              Para sonido tipo JARVIS, prueba "Microsoft Jorge", "Google español" o "Diego".
+            </p>
+          </section>
+
+          <div className="flex gap-2">
+            <Button onClick={test} className="flex-1">
+              <Play className="h-3.5 w-3.5 mr-2" /> Probar voz
+            </Button>
+            <Button variant="outline" onClick={reset}>
+              Restaurar
+            </Button>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
