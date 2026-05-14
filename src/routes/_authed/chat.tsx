@@ -20,14 +20,17 @@ import {
 } from "@/components/ai-elements/prompt-input";
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { VeymarLogo } from "@/components/veymar-logo";
-import { ImageActions, CopyTextButton } from "@/components/message-actions";
+import { ImageActions, CopyTextButton, SpeakAgainButton } from "@/components/message-actions";
 import { SpeakingWaves } from "@/components/speaking-waves";
+import { SettingsPanel } from "@/components/settings-panel";
+import { ModeSelector, type VeymarMode } from "@/components/mode-selector";
 import { Button } from "@/components/ui/button";
 import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff, WifiOff, Wifi, Paperclip, X, FileText, Music, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   useSpeechRecognition,
   speak,
+  stopSpeaking,
   getVoiceOwner,
   setVoiceOwner,
   extractWakeCommand,
