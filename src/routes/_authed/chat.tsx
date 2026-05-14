@@ -47,6 +47,16 @@ function ChatPage() {
   const navigate = useNavigate();
   const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(null);
 
+  const [mode, setMode] = useState<VeymarMode>(() => {
+    if (typeof window === "undefined") return "pro";
+    return (localStorage.getItem("veymar.mode") as VeymarMode) || "pro";
+  });
+  const modeRef = useRef<VeymarMode>(mode);
+  modeRef.current = mode;
+  useEffect(() => {
+    try { localStorage.setItem("veymar.mode", mode); } catch {}
+  }, [mode]);
+
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
@@ -61,6 +71,7 @@ function ChatPage() {
           try {
             const parsed = body ? JSON.parse(body as string) : {};
             parsed.ownerName = getVoiceOwner();
+            parsed.mode = modeRef.current;
             body = JSON.stringify(parsed);
           } catch {}
           return fetch(url, { ...init, headers, body });
