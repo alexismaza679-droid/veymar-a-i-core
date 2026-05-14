@@ -113,7 +113,7 @@ function ChatPage() {
     );
   }
 
-  return <ChatInner initialMessages={initialMessages} transport={transport} onSignOut={async () => {
+  return <ChatInner initialMessages={initialMessages} transport={transport} mode={mode} setMode={setMode} onSignOut={async () => {
     await supabase.auth.signOut();
     navigate({ to: "/auth" });
   }} />;
@@ -122,10 +122,14 @@ function ChatPage() {
 function ChatInner({
   initialMessages,
   transport,
+  mode,
+  setMode,
   onSignOut,
 }: {
   initialMessages: UIMessage[];
   transport: DefaultChatTransport<UIMessage>;
+  mode: VeymarMode;
+  setMode: (m: VeymarMode) => void;
   onSignOut: () => void;
 }) {
   const { messages, sendMessage, status, setMessages } = useChat({
