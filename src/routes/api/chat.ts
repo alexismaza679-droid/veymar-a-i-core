@@ -191,16 +191,23 @@ export const Route = createFileRoute("/api/chat")({
             }),
             generateImage: tool({
               description:
-                "Genera una imagen a partir de una descripción en lenguaje natural. Úsala cuando el usuario pida crear, dibujar o imaginar una imagen.",
+                "Genera una imagen siguiendo AL PIE DE LA LETRA la descripción del usuario. Usa esta herramienta cuando pidan crear, dibujar, imaginar, generar o diseñar una imagen, foto, logo, escena, personaje, póster, etc. NO inventes elementos no pedidos. Si el usuario menciona aspecto/proporción (cuadrado, vertical, horizontal, 16:9, 9:16, etc.), pásalo en aspectRatio.",
               inputSchema: z.object({
                 prompt: z
                   .string()
-                  .describe("Descripción detallada y vívida de la imagen a generar, en inglés o español."),
+                  .describe(
+                    "Descripción literal y específica de lo que el usuario pidió. Conserva sujetos, cantidades, colores, ropa, ambiente, estilo y detalles concretos. Puede estar en español o inglés.",
+                  ),
+                aspectRatio: z
+                  .string()
+                  .optional()
+                  .describe("Proporción opcional: '1:1', '16:9', '9:16', '3:4', '4:3'. Si el usuario no la menciona, omitir."),
               }),
-              execute: async ({ prompt }) => {
+              execute: async ({ prompt, aspectRatio }) => {
                 try {
-                  const url = await generateImageViaGateway(apiKey, prompt);
-                  return { ok: true, imageUrl: url, prompt };
+                  const enhanced = await enhanceImagePrompt(apiKey, prompt);
+                  const url = await generateImageViaGateway(apiKey, enhanced, aspectRatio);
+                  return { ok: true, imageUrl: url, prompt: enhanced };
                 } catch (e: any) {
                   return { ok: false, error: e?.message ?? "Error generando imagen" };
                 }
@@ -208,7 +215,7 @@ export const Route = createFileRoute("/api/chat")({
             }),
           };
 
-          const system = buildVeymarSystemPrompt({ now: new Date(), ownerName });
+          const system = buildVeymarSystemPrompt({ now: new Date(), ownerName, mode });
 
           const result = streamText({
             model,
