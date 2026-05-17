@@ -137,7 +137,12 @@ function ChatInner({
     transport,
     onError: (err) => {
       console.error(err);
-      toast.error("VEYMAR ha encontrado una anomalía. Reintenta.");
+      const msg = (err as any)?.message || "";
+      if (msg.toLowerCase().includes("payment") || msg.includes("402") || msg.toLowerCase().includes("credits")) {
+        toast.error("Núcleo sin créditos de IA. Añada créditos en Ajustes → Workspace → Uso.", { duration: 6000 });
+      } else {
+        toast.error("VEYMAR ha encontrado una anomalía. Reintenta.");
+      }
     },
   });
 
