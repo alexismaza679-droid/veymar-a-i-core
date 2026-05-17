@@ -223,10 +223,24 @@ export const Route = createFileRoute("/api/chat")({
             tools,
             stopWhen: stepCountIs(50),
             messages: await convertToModelMessages(sanitized),
+            onError: ({ error }) => {
+              console.error("[VEYMAR] streamText error", error);
+            },
           });
 
           return result.toUIMessageStreamResponse({
             originalMessages: messages,
+            onError: (error: unknown) => {
+              const msg = (error as any)?.message || String(error);
+              const lower = msg.toLowerCase();
+              if (lower.includes("payment") || lower.includes("not enough credits") || lower.includes("402")) {
+                return "Sin créditos en el núcleo de IA. Añada créditos en Ajustes → Workspace → Uso para que pueda seguir respondiendo.";
+              }
+              if (lower.includes("429") || lower.includes("rate limit")) {
+                return "Demasiadas solicitudes en este instante. Reintente en unos segundos.";
+              }
+              return "Anomalía temporal en el núcleo. Reintente en un momento.";
+            },
             onFinish: async ({ responseMessage }) => {
               try {
                 await supabase.from("messages").insert({
@@ -239,8 +253,12 @@ export const Route = createFileRoute("/api/chat")({
               }
             },
           });
-        } catch (err) {
+        } catch (err: any) {
           console.error("[VEYMAR] chat error", err);
+          const msg = err?.message || String(err);
+          if (msg.toLowerCase().includes("payment") || msg.includes("402")) {
+            return new Response("Sin créditos en el núcleo de IA. Añada créditos en Ajustes → Workspace → Uso.", { status: 402 });
+          }
           return new Response("Internal error", { status: 500 });
         }
       },
