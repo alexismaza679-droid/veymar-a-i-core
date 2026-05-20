@@ -121,7 +121,7 @@ export const Route = createFileRoute("/api/chat")({
 
           // Sanitiza historial: quita data URLs gigantes (imágenes generadas
           // y archivos adjuntos antiguos) y limita a los últimos 20 turnos.
-          const trimmed = messages.slice(-20);
+          const trimmed = messages.slice(-14);
           const lastIdx = trimmed.length - 1;
           const sanitized = trimmed.map((m, idx) => {
             if (!Array.isArray((m as any).parts)) return m;
