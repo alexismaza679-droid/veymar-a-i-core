@@ -44,13 +44,19 @@ async function generateImageViaGateway(
   prompt: string,
   aspectRatio?: string,
 ): Promise<string> {
+  // Orden por calidad: Pro Image (máxima) → Nano Banana 2 → Nano Banana.
   const models = [
-    "google/gemini-3.1-flash-image-preview", // Nano Banana 2 — más fiel al prompt
-    "google/gemini-2.5-flash-image-preview", // Nano Banana — fallback estable
+    "google/gemini-3-pro-image-preview",
+    "google/gemini-3.1-flash-image-preview",
+    "google/gemini-2.5-flash-image-preview",
   ];
+  const qualityBoost =
+    "Ultra high quality, photorealistic when the subject is real, crisp 4K detail, " +
+    "professional cinematic lighting, sharp focus, rich textures, perfect composition, " +
+    "no watermark, no random text, follow every detail of the description literally.";
   const finalPrompt = aspectRatio
-    ? `${prompt}\n\nAspect ratio: ${aspectRatio}. High quality, sharp focus, follow the description literally.`
-    : `${prompt}\n\nHigh quality, sharp focus, follow the description literally.`;
+    ? `${prompt}\n\nAspect ratio: ${aspectRatio}.\n${qualityBoost}`
+    : `${prompt}\n\n${qualityBoost}`;
   let lastErr = "";
   for (const model of models) {
     try {
