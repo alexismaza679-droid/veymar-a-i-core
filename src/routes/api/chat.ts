@@ -24,7 +24,7 @@ async function enhanceImagePrompt(apiKey: string, userPrompt: string): Promise<s
           {
             role: "system",
             content:
-              "You rewrite user image requests into a single, vivid, literal English image-generation prompt. RULES: Preserve EVERY explicit detail (subject, count, colors, clothing, pose, setting, mood, style). Do NOT add unrequested people, text, or objects. Add tasteful technical detail (lighting, lens, composition, art style) ONLY if it doesn't change meaning. Output ONLY the prompt, no preface, no quotes, max 90 words.",
+              "You rewrite user image requests into ONE vivid, literal English image-generation prompt that yields a stunning, high-quality picture. RULES: Preserve EVERY explicit detail (subject, count, gender, age, ethnicity if stated, colors, clothing, pose, setting, mood, art style). Do NOT add unrequested people, text, brands or objects. Add tasteful cinematic detail (lighting, lens, depth, composition, color grading, art style) ONLY if it doesn't change the meaning. Aim for awwwards-level visual quality. Output ONLY the prompt, no preface, no quotes, max 110 words.",
           },
           { role: "user", content: userPrompt },
         ],
@@ -44,13 +44,19 @@ async function generateImageViaGateway(
   prompt: string,
   aspectRatio?: string,
 ): Promise<string> {
+  // Orden por calidad: Pro Image (máxima) → Nano Banana 2 → Nano Banana.
   const models = [
-    "google/gemini-3.1-flash-image-preview", // Nano Banana 2 — más fiel al prompt
-    "google/gemini-2.5-flash-image-preview", // Nano Banana — fallback estable
+    "google/gemini-3-pro-image-preview",
+    "google/gemini-3.1-flash-image-preview",
+    "google/gemini-2.5-flash-image-preview",
   ];
+  const qualityBoost =
+    "Ultra high quality, photorealistic when the subject is real, crisp 4K detail, " +
+    "professional cinematic lighting, sharp focus, rich textures, perfect composition, " +
+    "no watermark, no random text, follow every detail of the description literally.";
   const finalPrompt = aspectRatio
-    ? `${prompt}\n\nAspect ratio: ${aspectRatio}. High quality, sharp focus, follow the description literally.`
-    : `${prompt}\n\nHigh quality, sharp focus, follow the description literally.`;
+    ? `${prompt}\n\nAspect ratio: ${aspectRatio}.\n${qualityBoost}`
+    : `${prompt}\n\n${qualityBoost}`;
   let lastErr = "";
   for (const model of models) {
     try {
@@ -115,7 +121,7 @@ export const Route = createFileRoute("/api/chat")({
 
           // Sanitiza historial: quita data URLs gigantes (imágenes generadas
           // y archivos adjuntos antiguos) y limita a los últimos 20 turnos.
-          const trimmed = messages.slice(-20);
+          const trimmed = messages.slice(-14);
           const lastIdx = trimmed.length - 1;
           const sanitized = trimmed.map((m, idx) => {
             if (!Array.isArray((m as any).parts)) return m;
@@ -153,8 +159,14 @@ export const Route = createFileRoute("/api/chat")({
           }
 
           const gateway = createLovableAiGatewayProvider(apiKey);
-          // Modelo rápido, multimodal y eficiente en datos
-          const model = gateway("google/gemini-3-flash-preview");
+          // Modelo según modo: el más barato/rápido para "fast", flash multimodal para el resto.
+          const modelId =
+            mode === "fast"
+              ? "google/gemini-3.1-flash-lite-preview"
+              : mode === "think" || mode === "expert"
+              ? "google/gemini-3.1-pro-preview"
+              : "google/gemini-3-flash-preview";
+          const model = gateway(modelId);
 
           const tools = {
             getCurrentTime: tool({
