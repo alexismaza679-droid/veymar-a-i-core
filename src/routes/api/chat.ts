@@ -25,10 +25,6 @@ async function enhanceImagePrompt(apiKey: string, userPrompt: string): Promise<s
             role: "system",
             content:
               "You rewrite user image requests into ONE vivid, literal English image-generation prompt that yields a stunning, high-quality picture. RULES: Preserve EVERY explicit detail (subject, count, gender, age, ethnicity if stated, colors, clothing, pose, setting, mood, art style). Do NOT add unrequested people, text, brands or objects. Add tasteful cinematic detail (lighting, lens, depth, composition, color grading, art style) ONLY if it doesn't change the meaning. Aim for awwwards-level visual quality. Output ONLY the prompt, no preface, no quotes, max 110 words.",
-          {
-            role: "system",
-            content:
-              "You rewrite user image requests into a single, vivid, literal English image-generation prompt. RULES: Preserve EVERY explicit detail (subject, count, colors, clothing, pose, setting, mood, style). Do NOT add unrequested people, text, or objects. Add tasteful technical detail (lighting, lens, composition, art style) ONLY if it doesn't change meaning. Output ONLY the prompt, no preface, no quotes, max 90 words.",
           },
           { role: "user", content: userPrompt },
         ],
