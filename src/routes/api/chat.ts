@@ -158,9 +158,14 @@ export const Route = createFileRoute("/api/chat")({
             });
           }
 
-          const gateway = createLovableAiGatewayProvider(apiKey);
-          // Modelo rápido, multimodal y eficiente en datos
-          const model = gateway("google/gemini-3-flash-preview");
+          // Modelo según modo: el más barato/rápido para "fast", flash multimodal para el resto.
+          const modelId =
+            mode === "fast"
+              ? "google/gemini-3.1-flash-lite-preview"
+              : mode === "think" || mode === "expert"
+              ? "google/gemini-3.1-pro-preview"
+              : "google/gemini-3-flash-preview";
+          const model = gateway(modelId);
 
           const tools = {
             getCurrentTime: tool({
