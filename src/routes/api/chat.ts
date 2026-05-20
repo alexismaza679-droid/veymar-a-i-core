@@ -158,6 +158,7 @@ export const Route = createFileRoute("/api/chat")({
             });
           }
 
+          const gateway = createLovableAiGatewayProvider(apiKey);
           // Modelo según modo: el más barato/rápido para "fast", flash multimodal para el resto.
           const modelId =
             mode === "fast"
