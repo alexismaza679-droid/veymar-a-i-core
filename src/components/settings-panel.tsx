@@ -35,9 +35,15 @@ export function SettingsPanel({
   const [pitch, setPitch] = useState(DEFAULT_VOICE_SETTINGS.pitch);
   const [voiceName, setVoice] = useState<string | null>(null);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [groqKey, setGroqKey] = useState("");
+  const [freeMode, setFreeMode] = useState(false);
 
   useEffect(() => {
     if (!open) return;
+    try {
+      setGroqKey(localStorage.getItem("veymar.groq_key") || "");
+      setFreeMode(localStorage.getItem("veymar.free_mode") === "1");
+    } catch {}
     const s = getVoiceSettings();
     setRate(s.rate);
     setPitch(s.pitch);
