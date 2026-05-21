@@ -1,11 +1,32 @@
 import "@tanstack/react-start";
 import { createFileRoute } from "@tanstack/react-router";
 import { convertToModelMessages, streamText, tool, stepCountIs, type UIMessage } from "ai";
+import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { z } from "zod";
 import { createLovableAiGatewayProvider, buildVeymarSystemPrompt } from "@/lib/ai-gateway";
 import { createClient } from "@supabase/supabase-js";
 
-type ChatBody = { messages?: UIMessage[]; ownerName?: string | null; mode?: "fast" | "pro" | "expert" | "think" };
+type ChatBody = {
+  messages?: UIMessage[];
+  ownerName?: string | null;
+  mode?: "fast" | "pro" | "expert" | "think";
+  userApiKey?: string | null;
+  userProvider?: "groq" | null;
+  freeMode?: boolean;
+};
+
+// Imagen 100% gratis sin API key (Pollinations.ai).
+function pollinationsImage(prompt: string, aspectRatio?: string): string {
+  const dims =
+    aspectRatio === "16:9" ? { w: 1280, h: 720 } :
+    aspectRatio === "9:16" ? { w: 720, h: 1280 } :
+    aspectRatio === "3:4" ? { w: 768, h: 1024 } :
+    aspectRatio === "4:3" ? { w: 1024, h: 768 } :
+    { w: 1024, h: 1024 };
+  const seed = Math.floor(Math.random() * 1_000_000);
+  const q = encodeURIComponent(prompt);
+  return `https://image.pollinations.ai/prompt/${q}?width=${dims.w}&height=${dims.h}&seed=${seed}&nologo=true&enhance=true`;
+}
 
 async function enhanceImagePrompt(apiKey: string, userPrompt: string): Promise<string> {
   // Reescribe el prompt del usuario en una descripción visual rica en inglés,
