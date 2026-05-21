@@ -185,20 +185,21 @@ export const Route = createFileRoute("/api/chat")({
           }
 
           // === Selección de proveedor ===
-          // Si el usuario configuró su propia API key de Groq → usar Groq (gratis ilimitado).
-          // Si no, usar Lovable AI Gateway (consume créditos del workspace).
+          // Prioridad: 1) key del usuario  2) GROQ_API_KEY del servidor (gratis para todos)  3) Lovable Gateway
+          const serverGroqKey = process.env.GROQ_API_KEY;
+          const effectiveGroqKey = (userProvider === "groq" && userApiKey) ? userApiKey : serverGroqKey;
+          const usingGroq = !!effectiveGroqKey;
+
           let model: any;
-          if (userProvider === "groq" && userApiKey) {
+          if (usingGroq) {
             const groq = createOpenAICompatible({
               name: "groq",
               baseURL: "https://api.groq.com/openai/v1",
-              headers: { Authorization: `Bearer ${userApiKey}` },
+              headers: { Authorization: `Bearer ${effectiveGroqKey}` },
             });
             const groqModel =
               mode === "fast"
                 ? "llama-3.1-8b-instant"
-                : mode === "think" || mode === "expert"
-                ? "llama-3.3-70b-versatile"
                 : "llama-3.3-70b-versatile";
             model = groq(groqModel);
           } else {
@@ -211,6 +212,7 @@ export const Route = createFileRoute("/api/chat")({
                 : "google/gemini-3-flash-preview";
             model = gateway(modelId);
           }
+
 
 
           const tools = {
