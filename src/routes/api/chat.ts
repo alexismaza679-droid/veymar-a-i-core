@@ -261,12 +261,19 @@ export const Route = createFileRoute("/api/chat")({
                   .describe("Proporción opcional: '1:1', '16:9', '9:16', '3:4', '4:3'. Si el usuario no la menciona, omitir."),
               }),
               execute: async ({ prompt, aspectRatio }) => {
+                // Modo libre o usando Groq: usa Pollinations.ai (gratis, sin créditos).
+                if (freeMode || userProvider === "groq") {
+                  const url = pollinationsImage(prompt, aspectRatio);
+                  return { ok: true, imageUrl: url, prompt };
+                }
                 try {
                   const enhanced = await enhanceImagePrompt(apiKey, prompt);
                   const url = await generateImageViaGateway(apiKey, enhanced, aspectRatio);
                   return { ok: true, imageUrl: url, prompt: enhanced };
                 } catch (e: any) {
-                  return { ok: false, error: e?.message ?? "Error generando imagen" };
+                  // Fallback gratis si el gateway falla (sin créditos, etc.)
+                  const url = pollinationsImage(prompt, aspectRatio);
+                  return { ok: true, imageUrl: url, prompt, fallback: true };
                 }
               },
             }),
