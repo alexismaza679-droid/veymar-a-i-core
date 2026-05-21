@@ -264,7 +264,7 @@ export const Route = createFileRoute("/api/chat")({
               }),
               execute: async ({ prompt, aspectRatio }) => {
                 // Modo libre o usando Groq: usa Pollinations.ai (gratis, sin créditos).
-                if (freeMode || userProvider === "groq") {
+                if (freeMode || usingGroq) {
                   const url = pollinationsImage(prompt, aspectRatio);
                   return { ok: true, imageUrl: url, prompt };
                 }
