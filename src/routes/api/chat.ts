@@ -138,10 +138,16 @@ export const Route = createFileRoute("/api/chat")({
           }
           const userId = claims.claims.sub as string;
 
-          const { messages = [], ownerName, mode = "pro" } = (await request.json()) as ChatBody;
+          const {
+            messages = [],
+            ownerName,
+            mode = "pro",
+            userApiKey = null,
+            userProvider = null,
+            freeMode = false,
+          } = (await request.json()) as ChatBody;
 
-          // Sanitiza historial: quita data URLs gigantes (imágenes generadas
-          // y archivos adjuntos antiguos) y limita a los últimos 20 turnos.
+          // ... (sanitización igual)
           const trimmed = messages.slice(-14);
           const lastIdx = trimmed.length - 1;
           const sanitized = trimmed.map((m, idx) => {
@@ -158,7 +164,6 @@ export const Route = createFileRoute("/api/chat")({
                   },
                 };
               }
-              // Mantén los archivos adjuntos sólo en el último mensaje del usuario.
               if (p?.type === "file" && !isLast) {
                 return {
                   type: "text",
@@ -179,15 +184,34 @@ export const Route = createFileRoute("/api/chat")({
             });
           }
 
-          const gateway = createLovableAiGatewayProvider(apiKey);
-          // Modelo según modo: el más barato/rápido para "fast", flash multimodal para el resto.
-          const modelId =
-            mode === "fast"
-              ? "google/gemini-3.1-flash-lite-preview"
-              : mode === "think" || mode === "expert"
-              ? "google/gemini-3.1-pro-preview"
-              : "google/gemini-3-flash-preview";
-          const model = gateway(modelId);
+          // === Selección de proveedor ===
+          // Si el usuario configuró su propia API key de Groq → usar Groq (gratis ilimitado).
+          // Si no, usar Lovable AI Gateway (consume créditos del workspace).
+          let model: any;
+          if (userProvider === "groq" && userApiKey) {
+            const groq = createOpenAICompatible({
+              name: "groq",
+              baseURL: "https://api.groq.com/openai/v1",
+              headers: { Authorization: `Bearer ${userApiKey}` },
+            });
+            const groqModel =
+              mode === "fast"
+                ? "llama-3.1-8b-instant"
+                : mode === "think" || mode === "expert"
+                ? "llama-3.3-70b-versatile"
+                : "llama-3.3-70b-versatile";
+            model = groq(groqModel);
+          } else {
+            const gateway = createLovableAiGatewayProvider(apiKey);
+            const modelId =
+              mode === "fast"
+                ? "google/gemini-3.1-flash-lite-preview"
+                : mode === "think" || mode === "expert"
+                ? "google/gemini-3.1-pro-preview"
+                : "google/gemini-3-flash-preview";
+            model = gateway(modelId);
+          }
+
 
           const tools = {
             getCurrentTime: tool({
