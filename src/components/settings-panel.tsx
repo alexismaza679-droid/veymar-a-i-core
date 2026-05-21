@@ -10,7 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
-import { Settings2, Play } from "lucide-react";
+import { Settings2, Play, Sparkles, ExternalLink } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import {
   DEFAULT_VOICE_SETTINGS,
   getVoiceSettings,
