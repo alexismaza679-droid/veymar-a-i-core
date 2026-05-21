@@ -72,6 +72,11 @@ function ChatPage() {
             const parsed = body ? JSON.parse(body as string) : {};
             parsed.ownerName = getVoiceOwner();
             parsed.mode = modeRef.current;
+            try {
+              parsed.userApiKey = localStorage.getItem("veymar.groq_key") || null;
+              parsed.userProvider = parsed.userApiKey ? "groq" : null;
+              parsed.freeMode = localStorage.getItem("veymar.free_mode") === "1";
+            } catch {}
             body = JSON.stringify(parsed);
           } catch {}
           return fetch(url, { ...init, headers, body });
