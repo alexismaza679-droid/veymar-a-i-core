@@ -23,6 +23,8 @@ import { VeymarLogo } from "@/components/veymar-logo";
 import { ImageActions, CopyTextButton, SpeakAgainButton } from "@/components/message-actions";
 import { SpeakingWaves } from "@/components/speaking-waves";
 import { SettingsPanel } from "@/components/settings-panel";
+import { StudioPanel } from "@/components/studio-panel";
+import { ModelBadge } from "@/components/model-badge";
 import { ModeSelector, type VeymarMode } from "@/components/mode-selector";
 import { Button } from "@/components/ui/button";
 import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff, WifiOff, Wifi, Paperclip, X, FileText, Music, Image as ImageIcon } from "lucide-react";
@@ -379,6 +381,7 @@ function ChatInner({
           >
             {voiceOutput ? <Volume2 className="h-4 w-4 text-primary" /> : <VolumeX className="h-4 w-4 text-amber-400" />}
           </Button>
+          <StudioPanel />
           <SettingsPanel ownerName={owner} onConfigureOwner={configureOwner} />
           <Button variant="ghost" size="icon-sm" onClick={wipe} title="Reiniciar memoria">
             <Trash2 className="h-4 w-4" />
@@ -612,6 +615,7 @@ function ChatInner({
                 <Paperclip className="h-4 w-4" />
               </Button>
               <ModeSelector mode={mode} onChange={setMode} />
+              <ModelBadge mode={mode} />
               {interim ? (
                 <span className="text-xs italic text-muted-foreground truncate max-w-[160px]">
                   «{interim}»
