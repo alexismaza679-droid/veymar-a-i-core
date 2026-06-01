@@ -26,6 +26,7 @@ import { SettingsPanel } from "@/components/settings-panel";
 import { StudioPanel } from "@/components/studio-panel";
 import { ModelBadge } from "@/components/model-badge";
 import { ModeSelector, type VeymarMode } from "@/components/mode-selector";
+import { DevPanel } from "@/components/dev-panel";
 import { Button } from "@/components/ui/button";
 import { LogOut, Trash2, Mic, MicOff, Volume2, VolumeX, UserCog, Ear, EarOff, WifiOff, Wifi, Paperclip, X, FileText, Music, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -652,6 +653,7 @@ function ChatInner({
           VEYMAR A.I. · Asistencia inteligente de nueva generación · Adjunta imágenes, PDF o audio
         </p>
       </div>
+      <DevPanel />
     </div>
   );
 }
