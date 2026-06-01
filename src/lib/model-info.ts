@@ -4,6 +4,9 @@ export function getActiveModel(mode: VeymarMode, hasGroqKey: boolean): {
   id: string;
   provider: "Groq" | "Lovable";
 } {
+  if (mode === "groq") {
+    return { id: "llama-3.3-70b-versatile", provider: "Groq" };
+  }
   if (hasGroqKey) {
     return {
       id: mode === "fast" ? "llama-3.1-8b-instant" : "llama-3.3-70b-versatile",

@@ -7,15 +7,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Brain, Zap, Sparkles, Telescope, ChevronDown } from "lucide-react";
+import { Brain, Zap, Sparkles, Telescope, ChevronDown, Rocket } from "lucide-react";
 
-export type VeymarMode = "fast" | "pro" | "expert" | "think";
+export type VeymarMode = "fast" | "pro" | "expert" | "think" | "groq";
 
 export const MODE_META: Record<
   VeymarMode,
   { label: string; icon: any; desc: string }
 > = {
   fast: { label: "Rápido", icon: Zap, desc: "Respuestas ágiles y breves" },
+  groq: { label: "Groq ⚡", icon: Rocket, desc: "Ilimitado · gratis · ultra rápido (Llama 3.3 70B)" },
   pro: { label: "Pro", icon: Sparkles, desc: "Respuestas balanceadas y pulidas" },
   expert: { label: "Experto", icon: Telescope, desc: "Análisis profundo, nivel senior" },
   think: { label: "Pensar más", icon: Brain, desc: "Razonamiento extendido paso a paso" },
