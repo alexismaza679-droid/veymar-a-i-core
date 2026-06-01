@@ -155,7 +155,30 @@ export function stopSpeaking() {
   } catch {}
 }
 
-export function speak(text: string, lang = "es-ES") {
+// Asegura que las voces estén cargadas (Chrome las carga asíncronamente).
+function ensureVoices(): Promise<SpeechSynthesisVoice[]> {
+  return new Promise((resolve) => {
+    const synth = window.speechSynthesis;
+    if (!synth) return resolve([]);
+    const v = synth.getVoices();
+    if (v && v.length) return resolve(v);
+    let resolved = false;
+    const done = () => {
+      if (resolved) return;
+      resolved = true;
+      resolve(synth.getVoices() || []);
+    };
+    synth.addEventListener?.("voiceschanged", done as any, { once: true } as any);
+    setTimeout(done, 1200);
+  });
+}
+
+// Prime voices on first load.
+if (typeof window !== "undefined" && window.speechSynthesis) {
+  try { window.speechSynthesis.getVoices(); } catch {}
+}
+
+export async function speak(text: string, lang = "es-ES") {
   if (typeof window === "undefined") return;
   const synth = window.speechSynthesis;
   if (!synth) return;
@@ -163,19 +186,17 @@ export function speak(text: string, lang = "es-ES") {
   const clean = stripForSpeech(text);
   if (!clean) return;
   const settings = getVoiceSettings();
+  const voices = await ensureVoices();
   const u = new SpeechSynthesisUtterance(clean);
   u.lang = lang;
   u.rate = settings.rate;
   u.pitch = settings.pitch;
   u.volume = 1;
-  const voices = synth.getVoices();
-  // Si el usuario eligió una voz específica, úsala.
   let chosen: SpeechSynthesisVoice | undefined;
   if (settings.voiceName) {
     chosen = voices.find((v) => v.name === settings.voiceName);
   }
   if (!chosen) {
-    // Prioridad: voz masculina elegante en español (estilo JARVIS)
     const isMale = (v: SpeechSynthesisVoice) =>
       /jorge|diego|carlos|enrique|miguel|pablo|juan|alvaro|male|hombre/i.test(v.name) &&
       !/female|mujer/i.test(v.name);
@@ -186,7 +207,10 @@ export function speak(text: string, lang = "es-ES") {
       voices.find((v) => /^es/i.test(v.lang)) ||
       voices[0];
   }
-  if (chosen) u.voice = chosen;
+  if (chosen) {
+    u.voice = chosen;
+    u.lang = chosen.lang || lang;
+  }
   synth.speak(u);
 }
 
