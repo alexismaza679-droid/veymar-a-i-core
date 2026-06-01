@@ -147,8 +147,8 @@ export const Route = createFileRoute("/api/chat")({
             freeMode = false,
           } = (await request.json()) as ChatBody;
 
-          // ... (sanitización igual)
-          const trimmed = messages.slice(-14);
+          // Menos historial = respuestas más rápidas y menos tokens.
+          const trimmed = messages.slice(-8);
           const lastIdx = trimmed.length - 1;
           const sanitized = trimmed.map((m, idx) => {
             if (!Array.isArray((m as any).parts)) return m;
