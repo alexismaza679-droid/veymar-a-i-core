@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Slider } from "@/components/ui/slider";
-import { Wand2, Music2, Upload, ExternalLink, Sparkles, Gamepad2, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Wand2, Music2, Upload, ExternalLink, Sparkles, Gamepad2, Loader2, Video } from "lucide-react";
 import { toast } from "sonner";
 import { analyzeAudioFile, type AudioAnalysis } from "@/lib/audio-analysis";
 
@@ -61,6 +62,56 @@ export function StudioPanel() {
   );
 }
 
+// Re-renderiza un audio cambiándole el tempo (con cambio de tono leve).
+// Simple y suficiente para "forzar" un BPM objetivo.
+async function timeStretchToBpm(blobUrl: string, fromBpm: number, toBpm: number): Promise<string> {
+  if (!fromBpm || !toBpm || fromBpm === toBpm) return blobUrl;
+  const ratio = toBpm / fromBpm; // >1 acelera, <1 ralentiza
+  const ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+  const resp = await fetch(blobUrl);
+  const buf = await resp.arrayBuffer();
+  const decoded = await ac.decodeAudioData(buf);
+  ac.close();
+  const newLen = Math.floor(decoded.length / ratio);
+  const off = new OfflineAudioContext(decoded.numberOfChannels, newLen, decoded.sampleRate);
+  const src = off.createBufferSource();
+  src.buffer = decoded;
+  src.playbackRate.value = ratio;
+  src.connect(off.destination);
+  src.start();
+  const out = await off.startRendering();
+  // WAV encode rápido
+  return bufferToWavDataUrl(out);
+}
+
+function bufferToWavDataUrl(buffer: AudioBuffer): string {
+  const numCh = buffer.numberOfChannels;
+  const sr = buffer.sampleRate;
+  const len = buffer.length * numCh * 2 + 44;
+  const ab = new ArrayBuffer(len);
+  const view = new DataView(ab);
+  const writeStr = (o: number, s: string) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+  writeStr(0, "RIFF"); view.setUint32(4, len - 8, true); writeStr(8, "WAVE");
+  writeStr(12, "fmt "); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+  view.setUint16(22, numCh, true); view.setUint32(24, sr, true);
+  view.setUint32(28, sr * numCh * 2, true); view.setUint16(32, numCh * 2, true); view.setUint16(34, 16, true);
+  writeStr(36, "data"); view.setUint32(40, len - 44, true);
+  let off = 44;
+  const channels: Float32Array[] = [];
+  for (let i = 0; i < numCh; i++) channels.push(buffer.getChannelData(i));
+  for (let i = 0; i < buffer.length; i++) {
+    for (let c = 0; c < numCh; c++) {
+      let s = Math.max(-1, Math.min(1, channels[c][i]));
+      view.setInt16(off, s < 0 ? s * 0x8000 : s * 0x7fff, true);
+      off += 2;
+    }
+  }
+  // base64
+  const bytes = new Uint8Array(ab);
+  let bin = ""; for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return "data:audio/wav;base64," + btoa(bin);
+}
+
 function MusicStudio() {
   const [prompt, setPrompt] = useState("");
   const [lyrics, setLyrics] = useState("");
@@ -71,6 +122,8 @@ function MusicStudio() {
   const [analyzing, setAnalyzing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [tracks, setTracks] = useState<{ model: string; url: string | null; error?: string }[]>([]);
+  const [targetBpm, setTargetBpm] = useState<string>("");
+  const [forceTempo, setForceTempo] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const toggleModel = (id: string) => {
@@ -85,6 +138,7 @@ function MusicStudio() {
     try {
       const a = await analyzeAudioFile(file);
       setAnalysis(a);
+      setTargetBpm(String(a.bpm));
       toast.success(`Análisis listo · ${a.bpm} BPM · ${a.key}`);
     } catch (e: any) {
       toast.error("No pude analizar el audio: " + (e?.message ?? "error"));
@@ -105,19 +159,21 @@ function MusicStudio() {
     setGenerating(true);
     setTracks(models.map((m) => ({ model: m, url: null })));
 
-    // Construimos un prompt enriquecido con BPM/tonalidad si hay referencia.
-    const enriched = analysis
-      ? `${prompt}. Tempo ${analysis.bpm} BPM, tonalidad ${analysis.key}.${lyrics ? ` Letra: ${lyrics.slice(0, 200)}` : ""}`
-      : `${prompt}${lyrics ? `. Letra: ${lyrics.slice(0, 200)}` : ""}`;
+    const tBpm = Number(targetBpm) || analysis?.bpm || 0;
+    // Prompt enriquecido con BPM/tonalidad
+    const bits = [prompt];
+    if (tBpm) bits.push(`exactly ${tBpm} BPM`);
+    if (analysis?.key) bits.push(`tonalidad ${analysis.key}`);
+    if (lyrics) bits.push(`Letra guía: ${lyrics.slice(0, 200)}`);
+    const enriched = bits.join(". ");
 
-    // Disparamos en paralelo. El backend intentará varios proveedores gratuitos.
     await Promise.all(
       models.map(async (model) => {
         try {
           const res = await fetch("/api/music", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ prompt: enriched, model, duration }),
+            body: JSON.stringify({ prompt: enriched, model, duration, targetBpm: tBpm || undefined }),
           });
           if (!res.ok) {
             const txt = await res.text();
@@ -127,11 +183,18 @@ function MusicStudio() {
             return;
           }
           const json = (await res.json()) as { url?: string; error?: string };
+          let finalUrl = json.url ?? null;
+          // Forzar tempo en cliente si el usuario lo pidió y tenemos referencia analizada.
+          if (finalUrl && forceTempo && analysis?.bpm && tBpm && analysis.bpm !== tBpm) {
+            try {
+              finalUrl = await timeStretchToBpm(finalUrl, analysis.bpm, tBpm);
+            } catch (e) {
+              console.warn("force tempo failed", e);
+            }
+          }
           setTracks((t) =>
             t.map((x) =>
-              x.model === model
-                ? { ...x, url: json.url ?? null, error: json.error }
-                : x,
+              x.model === model ? { ...x, url: finalUrl, error: json.error } : x,
             ),
           );
         } catch (e: any) {
@@ -146,9 +209,8 @@ function MusicStudio() {
 
   return (
     <div className="space-y-4">
-      <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-[11px] text-amber-200/90">
-        Modo gratis: usamos endpoints públicos de MusicGen (Meta). Pueden ir lentos o caer.
-        Si quieres calidad estable, añade un <strong>HF_TOKEN</strong> (gratis en huggingface.co).
+      <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 p-2 text-[11px] text-emerald-200/90">
+        HF_TOKEN configurado · generación estable con MusicGen (Meta) · gratis.
       </div>
 
       <section className="space-y-2">
@@ -199,12 +261,36 @@ function MusicStudio() {
         )}
         {analysis && (
           <div className="rounded-md border border-primary/30 bg-primary/5 p-2 text-[11px]">
-            <div><strong>{analysis.bpm}</strong> BPM · tonalidad <strong>{analysis.key}</strong></div>
-            <div className="text-muted-foreground">
-              Se inyectará en el prompt. MusicGen-Melody además usará el audio como guía.
-            </div>
+            <div>Detectado: <strong>{analysis.bpm}</strong> BPM · tonalidad <strong>{analysis.key}</strong></div>
           </div>
         )}
+      </section>
+
+      <section className="space-y-2 rounded-md border border-border/40 p-2">
+        <Label className="text-[10px] uppercase tracking-[0.3em] text-primary">
+          BPM objetivo (manual)
+        </Label>
+        <div className="flex items-center gap-2">
+          <Input
+            type="number"
+            min={40}
+            max={240}
+            placeholder="120"
+            value={targetBpm}
+            onChange={(e) => setTargetBpm(e.target.value)}
+            className="h-8 text-xs"
+          />
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap">BPM</span>
+        </div>
+        <div className="flex items-center justify-between gap-2 pt-1">
+          <div>
+            <div className="text-xs">Forzar tempo del resultado</div>
+            <div className="text-[10px] text-muted-foreground">
+              Re-procesa el audio para igualar el BPM (puede cambiar el tono).
+            </div>
+          </div>
+          <Switch checked={forceTempo} onCheckedChange={setForceTempo} />
+        </div>
       </section>
 
       <section className="space-y-2">
@@ -303,11 +389,18 @@ function GeniePanel() {
       </div>
 
       <div className="rounded-md border border-border/40 p-3 space-y-2">
-        <div className="text-xs font-medium">Alternativa libre disponible ahora</div>
+        <div className="flex items-center gap-2 text-xs font-medium">
+          <Video className="h-3.5 w-3.5 text-primary" /> ¿Qué es el "video libre"?
+        </div>
+        <p className="text-[11px] text-muted-foreground leading-relaxed">
+          Como Genie 2 no es público, lo más cercano <strong>y gratis</strong> que puedo
+          activar aquí es <em>imagen → video corto</em> usando modelos libres
+          (Stable Video Diffusion / AnimateDiff vía HuggingFace, o Pollinations para clips).
+          Subes una imagen, das una instrucción de movimiento y obtienes un clip de 2–4s.
+          No es un mundo jugable, pero es lo más parecido disponible sin pagar.
+        </p>
         <p className="text-[11px] text-muted-foreground">
-          Mientras Genie 2 no se abra, puedo prepararte un panel de
-          <strong> video generativo gratis</strong> (imagen → video corto)
-          usando Pollinations o un modelo libre equivalente. Dime y lo activo aquí.
+          Dime "activa video libre" y lo añado en este mismo panel.
         </p>
       </div>
 

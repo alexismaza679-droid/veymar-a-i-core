@@ -47,11 +47,14 @@ export const Route = createFileRoute("/_authed/chat")({
 function ChatPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [initialMessages, setInitialMessages] = useState<UIMessage[] | null>(null);
+  // Arrancamos con historial vacío y lo rellenamos en segundo plano:
+  // así la UI aparece al instante (sin pantalla de carga larga).
+  const [initialMessages, setInitialMessages] = useState<UIMessage[]>([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
 
   const [mode, setMode] = useState<VeymarMode>(() => {
-    if (typeof window === "undefined") return "pro";
-    return (localStorage.getItem("veymar.mode") as VeymarMode) || "pro";
+    if (typeof window === "undefined") return "fast";
+    return (localStorage.getItem("veymar.mode") as VeymarMode) || "fast";
   });
   const modeRef = useRef<VeymarMode>(mode);
   modeRef.current = mode;
@@ -87,7 +90,7 @@ function ChatPage() {
     [],
   );
 
-  // Load history once
+  // Carga el historial en segundo plano (no bloquea el render).
   useEffect(() => {
     if (!user) return;
     let cancelled = false;
@@ -95,35 +98,39 @@ function ChatPage() {
       const { data, error } = await supabase
         .from("messages")
         .select("content, created_at")
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: false })
+        .limit(60);
       if (cancelled) return;
       if (error) {
         console.error(error);
-        setInitialMessages([]);
+        setHistoryLoaded(true);
         return;
       }
       const msgs = (data ?? [])
+        .reverse()
         .map((row) => row.content as unknown as UIMessage)
         .filter((m) => m && m.role && Array.isArray(m.parts));
       setInitialMessages(msgs);
+      setHistoryLoaded(true);
     })();
     return () => {
       cancelled = true;
     };
   }, [user]);
 
-  if (initialMessages === null) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <VeymarLogo className="h-20 w-20 animate-veymar-pulse" />
-      </div>
-    );
-  }
-
-  return <ChatInner initialMessages={initialMessages} transport={transport} mode={mode} setMode={setMode} onSignOut={async () => {
-    await supabase.auth.signOut();
-    navigate({ to: "/auth" });
-  }} />;
+  return (
+    <ChatInner
+      key={historyLoaded ? "ready" : "boot"}
+      initialMessages={initialMessages}
+      transport={transport}
+      mode={mode}
+      setMode={setMode}
+      onSignOut={async () => {
+        await supabase.auth.signOut();
+        navigate({ to: "/auth" });
+      }}
+    />
+  );
 }
 
 function ChatInner({

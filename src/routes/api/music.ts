@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-type Body = { prompt?: string; model?: string; duration?: number };
+type Body = { prompt?: string; model?: string; duration?: number; targetBpm?: number };
 
 const HF_MODEL_MAP: Record<string, string> = {
   "musicgen-melody": "facebook/musicgen-melody",
@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/music")({
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         try {
-          const { prompt = "", model = "musicgen-melody", duration = 15 } =
+          const { prompt = "", model = "musicgen-melody", duration = 15, targetBpm } =
             (await request.json()) as Body;
           if (!prompt.trim()) {
             return new Response(JSON.stringify({ error: "Falta el prompt" }), {
@@ -34,6 +34,9 @@ export const Route = createFileRoute("/api/music")({
           }
 
           const hfModel = HF_MODEL_MAP[model] ?? HF_MODEL_MAP["musicgen-large"];
+          const finalPrompt = targetBpm
+            ? `${prompt}. Strictly ${targetBpm} BPM, locked tempo, metronomic precision.`
+            : prompt;
           const r = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
             method: "POST",
             headers: {
@@ -42,7 +45,7 @@ export const Route = createFileRoute("/api/music")({
               Accept: "audio/wav",
             },
             body: JSON.stringify({
-              inputs: prompt,
+              inputs: finalPrompt,
               parameters: { duration: Math.min(30, Math.max(5, duration)) },
               options: { wait_for_model: true },
             }),
