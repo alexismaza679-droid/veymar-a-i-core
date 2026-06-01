@@ -34,6 +34,9 @@ export const Route = createFileRoute("/api/music")({
           }
 
           const hfModel = HF_MODEL_MAP[model] ?? HF_MODEL_MAP["musicgen-large"];
+          const finalPrompt = targetBpm
+            ? `${prompt}. Strictly ${targetBpm} BPM, locked tempo, metronomic precision.`
+            : prompt;
           const r = await fetch(`https://api-inference.huggingface.co/models/${hfModel}`, {
             method: "POST",
             headers: {
@@ -42,7 +45,7 @@ export const Route = createFileRoute("/api/music")({
               Accept: "audio/wav",
             },
             body: JSON.stringify({
-              inputs: prompt,
+              inputs: finalPrompt,
               parameters: { duration: Math.min(30, Math.max(5, duration)) },
               options: { wait_for_model: true },
             }),
