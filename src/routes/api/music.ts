@@ -13,7 +13,7 @@ export const Route = createFileRoute("/api/music")({
     handlers: {
       POST: async ({ request }: { request: Request }) => {
         try {
-          const { prompt = "", model = "musicgen-melody", duration = 15 } =
+          const { prompt = "", model = "musicgen-melody", duration = 15, targetBpm } =
             (await request.json()) as Body;
           if (!prompt.trim()) {
             return new Response(JSON.stringify({ error: "Falta el prompt" }), {
