@@ -10,11 +10,13 @@ export const createLovableAiGatewayProvider = (lovableApiKey: string) =>
     },
   });
 
-export type VeymarMode = "fast" | "pro" | "expert" | "think";
+export type VeymarMode = "fast" | "pro" | "expert" | "think" | "groq";
 
 const MODE_INSTRUCTIONS: Record<VeymarMode, string> = {
   fast:
     "MODO RÁPIDO: responde lo más breve y directo posible. 1-3 oraciones. Sin Markdown salvo necesario. Cero relleno.",
+  groq:
+    "MODO GROQ ULTRA: responde con la velocidad y precisión de Llama 3.3 70B. Conciso, útil, sin relleno. Markdown solo si aporta.",
   pro:
     "MODO PRO: respuestas balanceadas, naturales y pulidas. Estructura clara cuando aporte. Profundidad media.",
   expert:
