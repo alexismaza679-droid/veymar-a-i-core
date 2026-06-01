@@ -118,9 +118,21 @@ function ChatPage() {
     };
   }, [user]);
 
+  // Esperamos al historial antes de montar el chat — así useChat se inicializa
+  // con los mensajes correctos y NO se reinicia a mitad de conversación.
+  if (!historyLoaded) {
+    return (
+      <div className="flex h-screen flex-col items-center justify-center gap-3">
+        <VeymarLogo className="h-16 w-16 animate-veymar-pulse" />
+        <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+          Sincronizando memoria…
+        </div>
+      </div>
+    );
+  }
+
   return (
     <ChatInner
-      key={historyLoaded ? "ready" : "boot"}
       initialMessages={initialMessages}
       transport={transport}
       mode={mode}
