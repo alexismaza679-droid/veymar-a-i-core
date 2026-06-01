@@ -9,7 +9,7 @@ import { createClient } from "@supabase/supabase-js";
 type ChatBody = {
   messages?: UIMessage[];
   ownerName?: string | null;
-  mode?: "fast" | "pro" | "expert" | "think";
+  mode?: "fast" | "pro" | "expert" | "think" | "groq";
   userApiKey?: string | null;
   userProvider?: "groq" | null;
   freeMode?: boolean;
@@ -185,10 +185,11 @@ export const Route = createFileRoute("/api/chat")({
           }
 
           // === Selección de proveedor ===
-          // Prioridad: 1) key del usuario  2) GROQ_API_KEY del servidor (gratis para todos)  3) Lovable Gateway
+          // Prioridad: 1) modo "groq" explícito  2) key del usuario  3) GROQ_API_KEY del servidor  4) Lovable Gateway
           const serverGroqKey = process.env.GROQ_API_KEY;
+          const forceGroq = mode === "groq";
           const effectiveGroqKey = (userProvider === "groq" && userApiKey) ? userApiKey : serverGroqKey;
-          const usingGroq = !!effectiveGroqKey;
+          const usingGroq = forceGroq ? !!effectiveGroqKey : !!effectiveGroqKey;
 
           let model: any;
           if (usingGroq) {
