@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 
-type Body = { prompt?: string; model?: string; duration?: number };
+type Body = { prompt?: string; model?: string; duration?: number; targetBpm?: number };
 
 const HF_MODEL_MAP: Record<string, string> = {
   "musicgen-melody": "facebook/musicgen-melody",
