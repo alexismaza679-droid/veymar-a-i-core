@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import {
   DEFAULT_VOICE_SETTINGS,
   getVoiceSettings,
+  listAllVoices,
   listSpanishVoices,
   setVoiceSettings,
   speak,
@@ -37,6 +38,7 @@ export function SettingsPanel({
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [groqKey, setGroqKey] = useState("");
   const [freeMode, setFreeMode] = useState(false);
+  const [allVoices, setAllVoices] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -48,11 +50,11 @@ export function SettingsPanel({
     setRate(s.rate);
     setPitch(s.pitch);
     setVoice(s.voiceName);
-    const load = () => setVoices(listSpanishVoices());
+    const load = () => setVoices(allVoices ? listAllVoices() : listSpanishVoices());
     load();
     window.speechSynthesis?.addEventListener?.("voiceschanged", load);
     return () => window.speechSynthesis?.removeEventListener?.("voiceschanged", load);
-  }, [open]);
+  }, [open, allVoices]);
 
   const persist = (next: Partial<{ rate: number; pitch: number; voiceName: string | null }>) => {
     setVoiceSettings(next);
@@ -199,13 +201,22 @@ export function SettingsPanel({
           </section>
 
           <section className="space-y-2">
-            <Label className="text-[10px] uppercase tracking-[0.3em] text-primary">Voz del sistema</Label>
+            <div className="flex items-center justify-between">
+              <Label className="text-[10px] uppercase tracking-[0.3em] text-primary">Voz del sistema</Label>
+              <div className="flex items-center gap-2">
+                <Label className="text-[10px] text-muted-foreground">Todas las voces</Label>
+                <Switch checked={allVoices} onCheckedChange={setAllVoices} />
+              </div>
+            </div>
             <select
               value={voiceName ?? ""}
               onChange={(e) => {
                 const val = e.target.value || null;
                 setVoice(val);
                 persist({ voiceName: val });
+                // Prueba inmediata para confirmar el cambio
+                stopSpeaking();
+                setTimeout(() => speak("Voz actualizada. A su servicio."), 80);
               }}
               className="w-full rounded-md border border-border/40 bg-background px-2 py-2 text-sm"
             >
@@ -218,6 +229,7 @@ export function SettingsPanel({
             </select>
             <p className="text-[10px] text-muted-foreground">
               Para sonido tipo JARVIS, prueba "Microsoft Jorge", "Google español" o "Diego".
+              Activa "Todas las voces" si tu navegador trae voces de otros idiomas.
             </p>
           </section>
 
