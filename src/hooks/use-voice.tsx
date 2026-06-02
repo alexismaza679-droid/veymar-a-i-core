@@ -148,6 +148,43 @@ export function listSpanishVoices(): SpeechSynthesisVoice[] {
   return window.speechSynthesis.getVoices().filter((v) => /^es/i.test(v.lang));
 }
 
+export function listAllVoices(): SpeechSynthesisVoice[] {
+  if (typeof window === "undefined" || !window.speechSynthesis) return [];
+  return window.speechSynthesis.getVoices();
+}
+
+// Habla con una configuración puntual sin tocar los ajustes globales.
+export async function speakWith(
+  text: string,
+  override: { rate?: number; pitch?: number; voiceName?: string | null; lang?: string },
+) {
+  if (typeof window === "undefined") return;
+  const synth = window.speechSynthesis;
+  if (!synth) return;
+  synth.cancel();
+  const clean = stripForSpeech(text);
+  if (!clean) return;
+  const voices = await ensureVoices();
+  const u = new SpeechSynthesisUtterance(clean);
+  u.lang = override.lang || "es-ES";
+  u.rate = override.rate ?? 1.05;
+  u.pitch = override.pitch ?? 1.15;
+  u.volume = 1;
+  let chosen: SpeechSynthesisVoice | undefined;
+  if (override.voiceName) chosen = voices.find((v) => v.name === override.voiceName);
+  if (!chosen) {
+    chosen =
+      voices.find((v) => /female|mujer|helena|sabina|paulina|lucia|monica/i.test(v.name) && /^es/i.test(v.lang)) ||
+      voices.find((v) => /^es/i.test(v.lang)) ||
+      voices[0];
+  }
+  if (chosen) {
+    u.voice = chosen;
+    u.lang = chosen.lang || u.lang;
+  }
+  synth.speak(u);
+}
+
 export function stopSpeaking() {
   if (typeof window === "undefined") return;
   try {
