@@ -25,28 +25,97 @@ export const Route = createFileRoute("/api/dev-stats")({
             return new Response("Forbidden", { status: 403 });
           }
 
-          // Total messages
           const { count: totalMessages } = await supabaseAdmin
             .from("messages")
             .select("*", { count: "exact", head: true });
 
-          // Distinct users (sample last 1000)
+          // Pull a bigger window for per-user analytics
           const { data: rows } = await supabaseAdmin
             .from("messages")
-            .select("user_id, created_at")
+            .select("user_id, role, content, created_at")
             .order("created_at", { ascending: false })
-            .limit(1000);
+            .limit(3000);
+
           const userSet = new Set<string>();
           const perDay = new Map<string, number>();
+          type UStat = {
+            userId: string;
+            total: number;
+            userMsgs: number;
+            assistantMsgs: number;
+            first: string;
+            last: string;
+            sampleTypes: Record<string, number>;
+          };
+          const perUser = new Map<string, UStat>();
+
           (rows || []).forEach((r: any) => {
             userSet.add(r.user_id);
             const d = new Date(r.created_at).toISOString().slice(0, 10);
             perDay.set(d, (perDay.get(d) || 0) + 1);
+
+            const cur =
+              perUser.get(r.user_id) ||
+              ({
+                userId: r.user_id,
+                total: 0,
+                userMsgs: 0,
+                assistantMsgs: 0,
+                first: r.created_at,
+                last: r.created_at,
+                sampleTypes: {},
+              } as UStat);
+            cur.total += 1;
+            if (r.role === "user") cur.userMsgs += 1;
+            else if (r.role === "assistant") cur.assistantMsgs += 1;
+            if (r.created_at < cur.first) cur.first = r.created_at;
+            if (r.created_at > cur.last) cur.last = r.created_at;
+
+            // crude intent classification from raw text
+            const text =
+              typeof r.content === "string"
+                ? r.content
+                : r.content?.text || JSON.stringify(r.content || "");
+            const t = (text || "").toString().toLowerCase();
+            const cls = /\?$|qué|cómo|porqué|por qué|cuándo|dónde/.test(t)
+              ? "pregunta"
+              : /crea|haz|genera|hazme|dibuja|imagen|video|música|musica/.test(t)
+                ? "comando"
+                : "conversación";
+            cur.sampleTypes[cls] = (cur.sampleTypes[cls] || 0) + 1;
+            perUser.set(r.user_id, cur);
           });
+
           const days = Array.from(perDay.entries())
             .sort((a, b) => (a[0] < b[0] ? 1 : -1))
             .slice(0, 7)
             .reverse();
+
+          // Top 12 users by activity, enriched with email
+          const top = Array.from(perUser.values())
+            .sort((a, b) => b.total - a.total)
+            .slice(0, 12);
+
+          const enriched = await Promise.all(
+            top.map(async (s) => {
+              let email: string | null = null;
+              try {
+                const { data: ud } = await supabaseAdmin.auth.admin.getUserById(
+                  s.userId,
+                );
+                email = ud?.user?.email || null;
+              } catch {
+                /* ignore */
+              }
+              const ms =
+                new Date(s.last).getTime() - new Date(s.first).getTime();
+              return {
+                ...s,
+                email,
+                spanHours: Math.max(0, Math.round(ms / 36e5)),
+              };
+            }),
+          );
 
           const secrets = {
             GROQ_API_KEY: !!process.env.GROQ_API_KEY,
@@ -60,6 +129,7 @@ export const Route = createFileRoute("/api/dev-stats")({
               totalMessages: totalMessages ?? 0,
               uniqueUsersSample: userSet.size,
               perDay: days,
+              users: enriched,
               secrets,
               generatedAt: new Date().toISOString(),
             }),
