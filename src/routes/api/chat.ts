@@ -64,13 +64,17 @@ async function generateImageViaGateway(
   apiKey: string,
   prompt: string,
   aspectRatio?: string,
+  preferredModel?: string | null,
 ): Promise<string> {
-  // Orden por calidad: Pro Image (máxima) → Nano Banana 2 → Nano Banana.
-  const models = [
+  // Override del panel dev tiene prioridad sobre el orden por calidad.
+  const defaults = [
     "google/gemini-3-pro-image-preview",
     "google/gemini-3.1-flash-image-preview",
     "google/gemini-2.5-flash-image-preview",
   ];
+  const models = preferredModel
+    ? [preferredModel, ...defaults.filter((m) => m !== preferredModel)]
+    : defaults;
   const qualityBoost =
     "Ultra high quality, photorealistic when the subject is real, crisp 4K detail, " +
     "professional cinematic lighting, sharp focus, rich textures, perfect composition, " +
@@ -141,16 +145,27 @@ export const Route = createFileRoute("/api/chat")({
           const {
             messages = [],
             ownerName,
-            mode = "pro",
+            mode: requestedMode,
             userApiKey = null,
             userProvider = null,
-            freeMode = false,
+            freeMode: requestedFreeMode,
           } = (await request.json()) as ChatBody;
 
-          // Menos historial = respuestas más rápidas y menos tokens.
+          // Aplica overrides en vivo del panel dev.
+          const { loadAppConfig, buildToneSuffix } = await import(
+            "@/lib/app-config.server"
+          );
+          const cfg = await loadAppConfig();
+          const mode = (requestedMode ?? cfg.default_mode ?? "pro") as NonNullable<
+            ChatBody["mode"]
+          >;
+          const freeMode =
+            typeof requestedFreeMode === "boolean"
+              ? requestedFreeMode
+              : !!cfg.free_mode_default;
           const trimmed = messages.slice(-8);
           const lastIdx = trimmed.length - 1;
-          const sanitized = trimmed.map((m, idx) => {
+          const sanitized = trimmed.map((m: UIMessage, idx: number) => {
             if (!Array.isArray((m as any).parts)) return m;
             const isLast = idx === lastIdx;
             const parts = (m as any).parts.map((p: any) => {
@@ -271,7 +286,12 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 try {
                   const enhanced = await enhanceImagePrompt(apiKey, prompt);
-                  const url = await generateImageViaGateway(apiKey, enhanced, aspectRatio);
+                  const url = await generateImageViaGateway(
+                    apiKey,
+                    enhanced,
+                    aspectRatio,
+                    cfg.image_model,
+                  );
                   return { ok: true, imageUrl: url, prompt: enhanced };
                 } catch (e: any) {
                   // Fallback gratis si el gateway falla (sin créditos, etc.)
@@ -282,7 +302,9 @@ export const Route = createFileRoute("/api/chat")({
             }),
           };
 
-          const system = buildVeymarSystemPrompt({ now: new Date(), ownerName, mode });
+          const system =
+            buildVeymarSystemPrompt({ now: new Date(), ownerName, mode }) +
+            buildToneSuffix(cfg);
 
           const result = streamText({
             model,

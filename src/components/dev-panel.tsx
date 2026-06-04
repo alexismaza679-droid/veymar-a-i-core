@@ -38,6 +38,7 @@ type Msg = {
   role: "user" | "assistant";
   content: string;
   imageUrl?: string;
+  executed?: { action: any; result: any }[];
 };
 
 type UserStat = {
@@ -62,6 +63,21 @@ type Stats = {
 };
 
 const IDEAS: { title: string; prompt: string }[] = [
+  {
+    title: "⚡ Acción: Mejor generador de imágenes",
+    prompt:
+      "Cambia el generador de imágenes al mejor disponible, mejor que Nano Banana.",
+  },
+  {
+    title: "⚡ Acción: Modo gratis siempre",
+    prompt:
+      "Activa el modo libre por defecto para que las imágenes usen Pollinations sin gastar créditos.",
+  },
+  {
+    title: "⚡ Acción: Tono más cálido",
+    prompt:
+      "Ajusta el tono: formalidad 30, humor 70, empatía 90. Que VEYMAR sea más cálido y juguetón.",
+  },
   {
     title: "Integración de calendario",
     prompt:
@@ -203,11 +219,18 @@ export function DevPanel() {
         }),
       });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-      const json = (await res.json()) as { reply: string };
+      const json = (await res.json()) as {
+        reply: string;
+        executed?: { action: any; result: any }[];
+      };
       const imageUrl = pollinationsScreenshot(json.reply);
+      if (json.executed?.length) {
+        const ok = json.executed.filter((e) => e.result?.ok).length;
+        toast.success(`${ok}/${json.executed.length} acción(es) aplicadas en VEYMAR`);
+      }
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: json.reply, imageUrl },
+        { role: "assistant", content: json.reply, imageUrl, executed: json.executed },
       ]);
     } catch (e: any) {
       toast.error(`Dev chat: ${e?.message || e}`);
@@ -321,6 +344,39 @@ export function DevPanel() {
                     </pre>
                     {m.role === "assistant" && (
                       <>
+                        {m.executed && m.executed.length > 0 && (
+                          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 px-3 py-2 space-y-1">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-400 inline-flex items-center gap-1">
+                              <Sparkles className="h-3 w-3" /> Acciones ejecutadas en vivo
+                            </div>
+                            {m.executed.map((ex, j) => (
+                              <div
+                                key={j}
+                                className="text-[11px] font-mono flex items-center justify-between gap-2"
+                              >
+                                <span className="truncate">
+                                  {ex.action?.type}
+                                  {ex.action?.model
+                                    ? ` → ${ex.action.model}`
+                                    : ex.action?.modelId
+                                      ? ` → ${ex.action.modelId}`
+                                      : ex.action?.mode
+                                        ? ` → ${ex.action.mode}`
+                                        : ""}
+                                </span>
+                                <span
+                                  className={
+                                    ex.result?.ok
+                                      ? "text-emerald-400"
+                                      : "text-red-400"
+                                  }
+                                >
+                                  {ex.result?.ok ? "● aplicado" : "✕ error"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {m.imageUrl && (
                           <div className="rounded-md border border-primary/30 overflow-hidden bg-black/40">
                             <img
