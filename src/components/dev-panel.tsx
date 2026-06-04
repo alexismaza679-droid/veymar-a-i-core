@@ -64,6 +64,21 @@ type Stats = {
 
 const IDEAS: { title: string; prompt: string }[] = [
   {
+    title: "⚡ Acción: Mejor generador de imágenes",
+    prompt:
+      "Cambia el generador de imágenes al mejor disponible, mejor que Nano Banana.",
+  },
+  {
+    title: "⚡ Acción: Modo gratis siempre",
+    prompt:
+      "Activa el modo libre por defecto para que las imágenes usen Pollinations sin gastar créditos.",
+  },
+  {
+    title: "⚡ Acción: Tono más cálido",
+    prompt:
+      "Ajusta el tono: formalidad 30, humor 70, empatía 90. Que VEYMAR sea más cálido y juguetón.",
+  },
+  {
     title: "Integración de calendario",
     prompt:
       "Añade integración con Google Calendar para programar eventos y recordatorios desde el chat. Detalla archivos, endpoint y UI.",
