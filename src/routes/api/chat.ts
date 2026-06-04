@@ -64,13 +64,17 @@ async function generateImageViaGateway(
   apiKey: string,
   prompt: string,
   aspectRatio?: string,
+  preferredModel?: string | null,
 ): Promise<string> {
-  // Orden por calidad: Pro Image (máxima) → Nano Banana 2 → Nano Banana.
-  const models = [
+  // Override del panel dev tiene prioridad sobre el orden por calidad.
+  const defaults = [
     "google/gemini-3-pro-image-preview",
     "google/gemini-3.1-flash-image-preview",
     "google/gemini-2.5-flash-image-preview",
   ];
+  const models = preferredModel
+    ? [preferredModel, ...defaults.filter((m) => m !== preferredModel)]
+    : defaults;
   const qualityBoost =
     "Ultra high quality, photorealistic when the subject is real, crisp 4K detail, " +
     "professional cinematic lighting, sharp focus, rich textures, perfect composition, " +
