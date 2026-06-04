@@ -135,6 +135,77 @@ const IDEAS: { title: string; prompt: string }[] = [
   },
 ];
 
+const SUPREMO_ACTIONS: {
+  id: string;
+  label: string;
+  icon: typeof ScanSearch;
+  prompt: string;
+}[] = [
+  {
+    id: "analizar",
+    label: "Analizar Proyecto",
+    icon: ScanSearch,
+    prompt:
+      "Analiza la estructura actual del proyecto VEYMAR (rutas, componentes, APIs, tablas) y dame un diagnóstico técnico: qué está bien, qué falta, qué se puede optimizar. Sé conciso.",
+  },
+  {
+    id: "actualizar",
+    label: "Actualizar Sistema",
+    icon: RefreshCcw,
+    prompt:
+      "Revisa modelos de IA, dependencias críticas y configuración. Propón un plan de actualización paso a paso y aplica las acciones ejecutables que correspondan (set_chat_model, set_image_model si hay versiones mejores disponibles).",
+  },
+  {
+    id: "crear-funcion",
+    label: "Crear Función",
+    icon: Wand2,
+    prompt:
+      "Quiero crear una nueva función en VEYMAR. Pregúntame primero qué función necesito, luego entrega plan + archivos + código listo para pegar. Si se puede resolver con una acción ejecutable, hazla directamente.",
+  },
+  {
+    id: "errores",
+    label: "Corregir Errores",
+    icon: Bug,
+    prompt:
+      "Revisa los errores conocidos del sistema (chat, voz, generación de imágenes, panel) y entrega el fix más probable con código exacto y archivo a modificar.",
+  },
+  {
+    id: "perf",
+    label: "Optimizar Rendimiento",
+    icon: Gauge,
+    prompt:
+      "Optimiza el rendimiento de VEYMAR en móviles: caché HTTP, GPU acceleration, lazy loading, reducción de bundle. Da un plan priorizado.",
+  },
+  {
+    id: "seguridad",
+    label: "Revisar Seguridad",
+    icon: ShieldCheck,
+    prompt:
+      "Audita seguridad: RLS de Supabase, endpoints /api/* (rate-limit, validación Zod), exposición de claves, headers. Lista riesgos por severidad.",
+  },
+  {
+    id: "agente",
+    label: "Crear Agente IA",
+    icon: Bot,
+    prompt:
+      "Diseña un nuevo agente IA especializado para VEYMAR (define rol, system prompt, herramientas, integración). Pregúntame primero el dominio.",
+  },
+  {
+    id: "db",
+    label: "Gestionar Base de Datos",
+    icon: Database,
+    prompt:
+      "Inspecciona las tablas actuales (messages, app_config) y propón nuevas tablas/columnas/políticas RLS que VEYMAR necesite para escalar.",
+  },
+  {
+    id: "reporte",
+    label: "Generar Reportes",
+    icon: FileBarChart,
+    prompt:
+      "Genera un reporte ejecutivo del estado de VEYMAR: usuarios activos, mensajes, modelos en uso, configuración viva (app_config), salud del sistema.",
+  },
+];
+
 function pollinationsScreenshot(reply: string): string {
   const title =
     reply
