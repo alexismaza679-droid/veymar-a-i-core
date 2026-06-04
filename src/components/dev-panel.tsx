@@ -225,7 +225,9 @@ export function DevPanel() {
   const { user } = useAuth();
   const isDev = (user?.email || "").toLowerCase() === DEV_EMAIL;
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"chat" | "stats" | "users" | "ideas">("chat");
+  const [tab, setTab] = useState<
+    "supremo" | "chat" | "stats" | "users" | "ideas"
+  >("supremo");
   const [messages, setMessages] = useState<Msg[]>(() => {
     try {
       const raw = localStorage.getItem("veymar.dev_chat");
