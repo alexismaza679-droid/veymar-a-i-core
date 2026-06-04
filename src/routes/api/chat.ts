@@ -286,7 +286,12 @@ export const Route = createFileRoute("/api/chat")({
                 }
                 try {
                   const enhanced = await enhanceImagePrompt(apiKey, prompt);
-                  const url = await generateImageViaGateway(apiKey, enhanced, aspectRatio);
+                  const url = await generateImageViaGateway(
+                    apiKey,
+                    enhanced,
+                    aspectRatio,
+                    cfg.image_model,
+                  );
                   return { ok: true, imageUrl: url, prompt: enhanced };
                 } catch (e: any) {
                   // Fallback gratis si el gateway falla (sin créditos, etc.)
@@ -297,7 +302,9 @@ export const Route = createFileRoute("/api/chat")({
             }),
           };
 
-          const system = buildVeymarSystemPrompt({ now: new Date(), ownerName, mode });
+          const system =
+            buildVeymarSystemPrompt({ now: new Date(), ownerName, mode }) +
+            buildToneSuffix(cfg);
 
           const result = streamText({
             model,
