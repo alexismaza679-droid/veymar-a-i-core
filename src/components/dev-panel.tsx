@@ -28,6 +28,16 @@ import {
   RefreshCw,
   Lightbulb,
   Sparkles,
+  Crown,
+  ScanSearch,
+  RefreshCcw,
+  Wand2,
+  Bug,
+  Gauge,
+  ShieldCheck,
+  Bot,
+  Database,
+  FileBarChart,
 } from "lucide-react";
 import { toast } from "sonner";
 import { speakWith, stopSpeaking } from "@/hooks/use-voice";
@@ -125,6 +135,77 @@ const IDEAS: { title: string; prompt: string }[] = [
   },
 ];
 
+const SUPREMO_ACTIONS: {
+  id: string;
+  label: string;
+  icon: typeof ScanSearch;
+  prompt: string;
+}[] = [
+  {
+    id: "analizar",
+    label: "Analizar Proyecto",
+    icon: ScanSearch,
+    prompt:
+      "Analiza la estructura actual del proyecto VEYMAR (rutas, componentes, APIs, tablas) y dame un diagnóstico técnico: qué está bien, qué falta, qué se puede optimizar. Sé conciso.",
+  },
+  {
+    id: "actualizar",
+    label: "Actualizar Sistema",
+    icon: RefreshCcw,
+    prompt:
+      "Revisa modelos de IA, dependencias críticas y configuración. Propón un plan de actualización paso a paso y aplica las acciones ejecutables que correspondan (set_chat_model, set_image_model si hay versiones mejores disponibles).",
+  },
+  {
+    id: "crear-funcion",
+    label: "Crear Función",
+    icon: Wand2,
+    prompt:
+      "Quiero crear una nueva función en VEYMAR. Pregúntame primero qué función necesito, luego entrega plan + archivos + código listo para pegar. Si se puede resolver con una acción ejecutable, hazla directamente.",
+  },
+  {
+    id: "errores",
+    label: "Corregir Errores",
+    icon: Bug,
+    prompt:
+      "Revisa los errores conocidos del sistema (chat, voz, generación de imágenes, panel) y entrega el fix más probable con código exacto y archivo a modificar.",
+  },
+  {
+    id: "perf",
+    label: "Optimizar Rendimiento",
+    icon: Gauge,
+    prompt:
+      "Optimiza el rendimiento de VEYMAR en móviles: caché HTTP, GPU acceleration, lazy loading, reducción de bundle. Da un plan priorizado.",
+  },
+  {
+    id: "seguridad",
+    label: "Revisar Seguridad",
+    icon: ShieldCheck,
+    prompt:
+      "Audita seguridad: RLS de Supabase, endpoints /api/* (rate-limit, validación Zod), exposición de claves, headers. Lista riesgos por severidad.",
+  },
+  {
+    id: "agente",
+    label: "Crear Agente IA",
+    icon: Bot,
+    prompt:
+      "Diseña un nuevo agente IA especializado para VEYMAR (define rol, system prompt, herramientas, integración). Pregúntame primero el dominio.",
+  },
+  {
+    id: "db",
+    label: "Gestionar Base de Datos",
+    icon: Database,
+    prompt:
+      "Inspecciona las tablas actuales (messages, app_config) y propón nuevas tablas/columnas/políticas RLS que VEYMAR necesite para escalar.",
+  },
+  {
+    id: "reporte",
+    label: "Generar Reportes",
+    icon: FileBarChart,
+    prompt:
+      "Genera un reporte ejecutivo del estado de VEYMAR: usuarios activos, mensajes, modelos en uso, configuración viva (app_config), salud del sistema.",
+  },
+];
+
 function pollinationsScreenshot(reply: string): string {
   const title =
     reply
@@ -144,7 +225,9 @@ export function DevPanel() {
   const { user } = useAuth();
   const isDev = (user?.email || "").toLowerCase() === DEV_EMAIL;
   const [open, setOpen] = useState(false);
-  const [tab, setTab] = useState<"chat" | "stats" | "users" | "ideas">("chat");
+  const [tab, setTab] = useState<
+    "supremo" | "chat" | "stats" | "users" | "ideas"
+  >("supremo");
   const [messages, setMessages] = useState<Msg[]>(() => {
     try {
       const raw = localStorage.getItem("veymar.dev_chat");
@@ -288,20 +371,82 @@ export function DevPanel() {
             onValueChange={(v) => setTab(v as any)}
             className="flex-1 flex flex-col min-h-0"
           >
-            <TabsList className="mx-4 mt-3 grid grid-cols-4 shrink-0">
-              <TabsTrigger value="chat" className="text-[11px]">
+            <TabsList className="mx-4 mt-3 grid grid-cols-5 shrink-0">
+              <TabsTrigger value="supremo" className="text-[10px]">
+                <Crown className="h-3.5 w-3.5 mr-1" /> Sup.
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="text-[10px]">
                 <Hammer className="h-3.5 w-3.5 mr-1" /> Arq.
               </TabsTrigger>
-              <TabsTrigger value="ideas" className="text-[11px]">
+              <TabsTrigger value="ideas" className="text-[10px]">
                 <Lightbulb className="h-3.5 w-3.5 mr-1" /> Ideas
               </TabsTrigger>
-              <TabsTrigger value="stats" className="text-[11px]">
+              <TabsTrigger value="stats" className="text-[10px]">
                 <BarChart3 className="h-3.5 w-3.5 mr-1" /> Stats
               </TabsTrigger>
-              <TabsTrigger value="users" className="text-[11px]">
+              <TabsTrigger value="users" className="text-[10px]">
                 <Users className="h-3.5 w-3.5 mr-1" /> Users
               </TabsTrigger>
             </TabsList>
+
+            {/* SUPREMO TAB — Arquitecto IA Supremo */}
+            <TabsContent
+              value="supremo"
+              className="flex-1 min-h-0 overflow-y-auto m-0 mt-2 px-4 py-3 space-y-3 outline-none"
+            >
+              <div className="rounded-lg border border-primary/40 bg-gradient-to-br from-primary/10 via-background to-background p-4 relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.15),transparent_60%)] pointer-events-none" />
+                <div className="relative">
+                  <div className="text-[10px] uppercase tracking-[0.35em] text-primary inline-flex items-center gap-1">
+                    <Crown className="h-3 w-3" /> Arquitecto IA Supremo
+                  </div>
+                  <div className="mt-1 text-sm font-medium">
+                    Centro de control para evolucionar VEYMAR
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    Selecciona una operación o escribe una instrucción en lenguaje natural.
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {SUPREMO_ACTIONS.map((a, i) => {
+                  const Icon = a.icon;
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => {
+                        setTab("chat");
+                        void send(a.prompt);
+                      }}
+                      disabled={loading}
+                      className="group relative text-left rounded-lg border border-primary/20 bg-background/60 backdrop-blur px-3 py-3 hover:border-primary/60 hover:bg-primary/10 transition disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-md border border-primary/40 bg-primary/10 text-primary">
+                          <Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                          {String(i + 1).padStart(2, "0")}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-[12px] font-medium leading-tight">
+                        {a.label}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-md border border-border/40 bg-background/40 p-3 text-[11px] text-muted-foreground">
+                <div className="text-[10px] uppercase tracking-[0.3em] text-primary mb-1">
+                  Modo Autónomo
+                </div>
+                Cualquier instrucción aquí se envía al Arquitecto: analiza, identifica archivos
+                afectados, propone cambios y aplica acciones en vivo cuando son seguras. Para
+                cambios críticos pide confirmación antes de ejecutar.
+              </div>
+            </TabsContent>
 
             {/* CHAT TAB */}
             <TabsContent
