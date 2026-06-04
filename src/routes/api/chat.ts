@@ -163,8 +163,9 @@ export const Route = createFileRoute("/api/chat")({
             typeof requestedFreeMode === "boolean"
               ? requestedFreeMode
               : !!cfg.free_mode_default;
+          const trimmed = messages.slice(-8);
           const lastIdx = trimmed.length - 1;
-          const sanitized = trimmed.map((m, idx) => {
+          const sanitized = trimmed.map((m: UIMessage, idx: number) => {
             if (!Array.isArray((m as any).parts)) return m;
             const isLast = idx === lastIdx;
             const parts = (m as any).parts.map((p: any) => {
