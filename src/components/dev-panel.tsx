@@ -28,6 +28,16 @@ import {
   RefreshCw,
   Lightbulb,
   Sparkles,
+  Crown,
+  ScanSearch,
+  RefreshCcw,
+  Wand2,
+  Bug,
+  Gauge,
+  ShieldCheck,
+  Bot,
+  Database,
+  FileBarChart,
 } from "lucide-react";
 import { toast } from "sonner";
 import { speakWith, stopSpeaking } from "@/hooks/use-voice";
