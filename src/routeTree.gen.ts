@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiMusicRouteImport } from './routes/api/music'
 import { Route as ApiDevStatsRouteImport } from './routes/api/dev-stats'
 import { Route as ApiDevChatRouteImport } from './routes/api/dev-chat'
+import { Route as ApiDevActionRouteImport } from './routes/api/dev-action'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthedChatRouteImport } from './routes/_authed/chat'
 
@@ -47,6 +48,11 @@ const ApiDevChatRoute = ApiDevChatRouteImport.update({
   path: '/api/dev-chat',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiDevActionRoute = ApiDevActionRouteImport.update({
+  id: '/api/dev-action',
+  path: '/api/dev-action',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiChatRoute = ApiChatRouteImport.update({
   id: '/api/chat',
   path: '/api/chat',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/chat': typeof AuthedChatRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/dev-action': typeof ApiDevActionRoute
   '/api/dev-chat': typeof ApiDevChatRoute
   '/api/dev-stats': typeof ApiDevStatsRoute
   '/api/music': typeof ApiMusicRoute
@@ -72,6 +79,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/chat': typeof AuthedChatRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/dev-action': typeof ApiDevActionRoute
   '/api/dev-chat': typeof ApiDevChatRoute
   '/api/dev-stats': typeof ApiDevStatsRoute
   '/api/music': typeof ApiMusicRoute
@@ -83,6 +91,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authed/chat': typeof AuthedChatRoute
   '/api/chat': typeof ApiChatRoute
+  '/api/dev-action': typeof ApiDevActionRoute
   '/api/dev-chat': typeof ApiDevChatRoute
   '/api/dev-stats': typeof ApiDevStatsRoute
   '/api/music': typeof ApiMusicRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/chat'
     | '/api/chat'
+    | '/api/dev-action'
     | '/api/dev-chat'
     | '/api/dev-stats'
     | '/api/music'
@@ -103,6 +113,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/chat'
     | '/api/chat'
+    | '/api/dev-action'
     | '/api/dev-chat'
     | '/api/dev-stats'
     | '/api/music'
@@ -113,6 +124,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authed/chat'
     | '/api/chat'
+    | '/api/dev-action'
     | '/api/dev-chat'
     | '/api/dev-stats'
     | '/api/music'
@@ -123,6 +135,7 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   AuthRoute: typeof AuthRoute
   ApiChatRoute: typeof ApiChatRoute
+  ApiDevActionRoute: typeof ApiDevActionRoute
   ApiDevChatRoute: typeof ApiDevChatRoute
   ApiDevStatsRoute: typeof ApiDevStatsRoute
   ApiMusicRoute: typeof ApiMusicRoute
@@ -172,6 +185,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiDevChatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/dev-action': {
+      id: '/api/dev-action'
+      path: '/api/dev-action'
+      fullPath: '/api/dev-action'
+      preLoaderRoute: typeof ApiDevActionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/chat': {
       id: '/api/chat'
       path: '/api/chat'
@@ -205,6 +225,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   AuthRoute: AuthRoute,
   ApiChatRoute: ApiChatRoute,
+  ApiDevActionRoute: ApiDevActionRoute,
   ApiDevChatRoute: ApiDevChatRoute,
   ApiDevStatsRoute: ApiDevStatsRoute,
   ApiMusicRoute: ApiMusicRoute,
