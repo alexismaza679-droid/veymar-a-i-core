@@ -371,20 +371,82 @@ export function DevPanel() {
             onValueChange={(v) => setTab(v as any)}
             className="flex-1 flex flex-col min-h-0"
           >
-            <TabsList className="mx-4 mt-3 grid grid-cols-4 shrink-0">
-              <TabsTrigger value="chat" className="text-[11px]">
+            <TabsList className="mx-4 mt-3 grid grid-cols-5 shrink-0">
+              <TabsTrigger value="supremo" className="text-[10px]">
+                <Crown className="h-3.5 w-3.5 mr-1" /> Sup.
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="text-[10px]">
                 <Hammer className="h-3.5 w-3.5 mr-1" /> Arq.
               </TabsTrigger>
-              <TabsTrigger value="ideas" className="text-[11px]">
+              <TabsTrigger value="ideas" className="text-[10px]">
                 <Lightbulb className="h-3.5 w-3.5 mr-1" /> Ideas
               </TabsTrigger>
-              <TabsTrigger value="stats" className="text-[11px]">
+              <TabsTrigger value="stats" className="text-[10px]">
                 <BarChart3 className="h-3.5 w-3.5 mr-1" /> Stats
               </TabsTrigger>
-              <TabsTrigger value="users" className="text-[11px]">
+              <TabsTrigger value="users" className="text-[10px]">
                 <Users className="h-3.5 w-3.5 mr-1" /> Users
               </TabsTrigger>
             </TabsList>
+
+            {/* SUPREMO TAB — Arquitecto IA Supremo */}
+            <TabsContent
+              value="supremo"
+              className="flex-1 min-h-0 overflow-y-auto m-0 mt-2 px-4 py-3 space-y-3 outline-none"
+            >
+              <div className="rounded-lg border border-primary/40 bg-gradient-to-br from-primary/10 via-background to-background p-4 relative overflow-hidden">
+                <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.15),transparent_60%)] pointer-events-none" />
+                <div className="relative">
+                  <div className="text-[10px] uppercase tracking-[0.35em] text-primary inline-flex items-center gap-1">
+                    <Crown className="h-3 w-3" /> Arquitecto IA Supremo
+                  </div>
+                  <div className="mt-1 text-sm font-medium">
+                    Centro de control para evolucionar VEYMAR
+                  </div>
+                  <div className="text-[11px] text-muted-foreground mt-1">
+                    Selecciona una operación o escribe una instrucción en lenguaje natural.
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                {SUPREMO_ACTIONS.map((a, i) => {
+                  const Icon = a.icon;
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => {
+                        setTab("chat");
+                        void send(a.prompt);
+                      }}
+                      disabled={loading}
+                      className="group relative text-left rounded-lg border border-primary/20 bg-background/60 backdrop-blur px-3 py-3 hover:border-primary/60 hover:bg-primary/10 transition disabled:opacity-50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-7 w-7 items-center justify-center rounded-md border border-primary/40 bg-primary/10 text-primary">
+                          <Icon className="h-3.5 w-3.5" />
+                        </div>
+                        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                          {String(i + 1).padStart(2, "0")}
+                        </div>
+                      </div>
+                      <div className="mt-2 text-[12px] font-medium leading-tight">
+                        {a.label}
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="rounded-md border border-border/40 bg-background/40 p-3 text-[11px] text-muted-foreground">
+                <div className="text-[10px] uppercase tracking-[0.3em] text-primary mb-1">
+                  Modo Autónomo
+                </div>
+                Cualquier instrucción aquí se envía al Arquitecto: analiza, identifica archivos
+                afectados, propone cambios y aplica acciones en vivo cuando son seguras. Para
+                cambios críticos pide confirmación antes de ejecutar.
+              </div>
+            </TabsContent>
 
             {/* CHAT TAB */}
             <TabsContent
