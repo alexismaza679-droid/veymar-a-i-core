@@ -204,11 +204,18 @@ export function DevPanel() {
         }),
       });
       if (!res.ok) throw new Error((await res.text()) || `HTTP ${res.status}`);
-      const json = (await res.json()) as { reply: string };
+      const json = (await res.json()) as {
+        reply: string;
+        executed?: { action: any; result: any }[];
+      };
       const imageUrl = pollinationsScreenshot(json.reply);
+      if (json.executed?.length) {
+        const ok = json.executed.filter((e) => e.result?.ok).length;
+        toast.success(`${ok}/${json.executed.length} acción(es) aplicadas en VEYMAR`);
+      }
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: json.reply, imageUrl },
+        { role: "assistant", content: json.reply, imageUrl, executed: json.executed },
       ]);
     } catch (e: any) {
       toast.error(`Dev chat: ${e?.message || e}`);
