@@ -329,6 +329,39 @@ export function DevPanel() {
                     </pre>
                     {m.role === "assistant" && (
                       <>
+                        {m.executed && m.executed.length > 0 && (
+                          <div className="rounded-md border border-emerald-500/40 bg-emerald-500/5 px-3 py-2 space-y-1">
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-emerald-400 inline-flex items-center gap-1">
+                              <Sparkles className="h-3 w-3" /> Acciones ejecutadas en vivo
+                            </div>
+                            {m.executed.map((ex, j) => (
+                              <div
+                                key={j}
+                                className="text-[11px] font-mono flex items-center justify-between gap-2"
+                              >
+                                <span className="truncate">
+                                  {ex.action?.type}
+                                  {ex.action?.model
+                                    ? ` → ${ex.action.model}`
+                                    : ex.action?.modelId
+                                      ? ` → ${ex.action.modelId}`
+                                      : ex.action?.mode
+                                        ? ` → ${ex.action.mode}`
+                                        : ""}
+                                </span>
+                                <span
+                                  className={
+                                    ex.result?.ok
+                                      ? "text-emerald-400"
+                                      : "text-red-400"
+                                  }
+                                >
+                                  {ex.result?.ok ? "● aplicado" : "✕ error"}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {m.imageUrl && (
                           <div className="rounded-md border border-primary/30 overflow-hidden bg-black/40">
                             <img
