@@ -145,14 +145,24 @@ export const Route = createFileRoute("/api/chat")({
           const {
             messages = [],
             ownerName,
-            mode = "pro",
+            mode: requestedMode,
             userApiKey = null,
             userProvider = null,
-            freeMode = false,
+            freeMode: requestedFreeMode,
           } = (await request.json()) as ChatBody;
 
-          // Menos historial = respuestas más rápidas y menos tokens.
-          const trimmed = messages.slice(-8);
+          // Aplica overrides en vivo del panel dev.
+          const { loadAppConfig, buildToneSuffix } = await import(
+            "@/lib/app-config.server"
+          );
+          const cfg = await loadAppConfig();
+          const mode = (requestedMode ?? cfg.default_mode ?? "pro") as NonNullable<
+            ChatBody["mode"]
+          >;
+          const freeMode =
+            typeof requestedFreeMode === "boolean"
+              ? requestedFreeMode
+              : !!cfg.free_mode_default;
           const lastIdx = trimmed.length - 1;
           const sanitized = trimmed.map((m, idx) => {
             if (!Array.isArray((m as any).parts)) return m;
