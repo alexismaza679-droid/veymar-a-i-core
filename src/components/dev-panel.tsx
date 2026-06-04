@@ -38,6 +38,7 @@ type Msg = {
   role: "user" | "assistant";
   content: string;
   imageUrl?: string;
+  executed?: { action: any; result: any }[];
 };
 
 type UserStat = {
