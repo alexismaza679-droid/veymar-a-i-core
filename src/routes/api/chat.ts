@@ -302,9 +302,14 @@ export const Route = createFileRoute("/api/chat")({
             }),
           };
 
+          const { loadVersions, buildVersionsContext } = await import(
+            "@/lib/versions.server"
+          );
+          const versions = await loadVersions();
           const system =
             buildVeymarSystemPrompt({ now: new Date(), ownerName, mode }) +
-            buildToneSuffix(cfg);
+            buildToneSuffix(cfg) +
+            buildVersionsContext(versions);
 
           const result = streamText({
             model,
