@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiVersionsRouteImport } from './routes/api/versions'
 import { Route as ApiMusicRouteImport } from './routes/api/music'
 import { Route as ApiDevStatsRouteImport } from './routes/api/dev-stats'
 import { Route as ApiDevChatRouteImport } from './routes/api/dev-chat'
@@ -31,6 +32,11 @@ const AuthedRoute = AuthedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiVersionsRoute = ApiVersionsRouteImport.update({
+  id: '/api/versions',
+  path: '/api/versions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiMusicRoute = ApiMusicRouteImport.update({
@@ -73,6 +79,7 @@ export interface FileRoutesByFullPath {
   '/api/dev-chat': typeof ApiDevChatRoute
   '/api/dev-stats': typeof ApiDevStatsRoute
   '/api/music': typeof ApiMusicRoute
+  '/api/versions': typeof ApiVersionsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/api/dev-chat': typeof ApiDevChatRoute
   '/api/dev-stats': typeof ApiDevStatsRoute
   '/api/music': typeof ApiMusicRoute
+  '/api/versions': typeof ApiVersionsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/api/dev-chat': typeof ApiDevChatRoute
   '/api/dev-stats': typeof ApiDevStatsRoute
   '/api/music': typeof ApiMusicRoute
+  '/api/versions': typeof ApiVersionsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -107,6 +116,7 @@ export interface FileRouteTypes {
     | '/api/dev-chat'
     | '/api/dev-stats'
     | '/api/music'
+    | '/api/versions'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -117,6 +127,7 @@ export interface FileRouteTypes {
     | '/api/dev-chat'
     | '/api/dev-stats'
     | '/api/music'
+    | '/api/versions'
   id:
     | '__root__'
     | '/'
@@ -128,6 +139,7 @@ export interface FileRouteTypes {
     | '/api/dev-chat'
     | '/api/dev-stats'
     | '/api/music'
+    | '/api/versions'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -139,6 +151,7 @@ export interface RootRouteChildren {
   ApiDevChatRoute: typeof ApiDevChatRoute
   ApiDevStatsRoute: typeof ApiDevStatsRoute
   ApiMusicRoute: typeof ApiMusicRoute
+  ApiVersionsRoute: typeof ApiVersionsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -162,6 +175,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/versions': {
+      id: '/api/versions'
+      path: '/api/versions'
+      fullPath: '/api/versions'
+      preLoaderRoute: typeof ApiVersionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/music': {
@@ -229,6 +249,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiDevChatRoute: ApiDevChatRoute,
   ApiDevStatsRoute: ApiDevStatsRoute,
   ApiMusicRoute: ApiMusicRoute,
+  ApiVersionsRoute: ApiVersionsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
