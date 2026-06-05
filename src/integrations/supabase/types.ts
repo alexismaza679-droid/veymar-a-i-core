@@ -35,6 +35,60 @@ export type Database = {
         }
         Relationships: []
       }
+      app_versions: {
+        Row: {
+          created_at: string
+          features: Json
+          fixes: Json
+          id: string
+          improvements: Json
+          is_current: boolean
+          is_next: boolean
+          name: string
+          notes: string | null
+          progress: number
+          released_at: string | null
+          status: string
+          summary: string | null
+          updated_at: string
+          version: string
+        }
+        Insert: {
+          created_at?: string
+          features?: Json
+          fixes?: Json
+          id?: string
+          improvements?: Json
+          is_current?: boolean
+          is_next?: boolean
+          name: string
+          notes?: string | null
+          progress?: number
+          released_at?: string | null
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          version: string
+        }
+        Update: {
+          created_at?: string
+          features?: Json
+          fixes?: Json
+          id?: string
+          improvements?: Json
+          is_current?: boolean
+          is_next?: boolean
+          name?: string
+          notes?: string | null
+          progress?: number
+          released_at?: string | null
+          status?: string
+          summary?: string | null
+          updated_at?: string
+          version?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: Json
