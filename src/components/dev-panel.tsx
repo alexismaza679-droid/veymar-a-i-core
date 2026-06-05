@@ -816,6 +816,13 @@ export function DevPanel() {
                 );
               })}
             </TabsContent>
+
+            <TabsContent
+              value="versions"
+              className="flex-1 min-h-0 overflow-y-auto m-0 mt-2 px-4 py-3 space-y-3 outline-none"
+            >
+              <VersionsManager isDev={isDev} />
+            </TabsContent>
           </Tabs>
         </SheetContent>
       </Sheet>
