@@ -38,6 +38,8 @@ import {
   Bot,
   Database,
   FileBarChart,
+  Rocket,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { speakWith, stopSpeaking } from "@/hooks/use-voice";
@@ -226,7 +228,7 @@ export function DevPanel() {
   const isDev = (user?.email || "").toLowerCase() === DEV_EMAIL;
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<
-    "supremo" | "chat" | "stats" | "users" | "ideas"
+    "supremo" | "chat" | "versions" | "stats" | "users" | "ideas"
   >("supremo");
   const [messages, setMessages] = useState<Msg[]>(() => {
     try {
@@ -371,12 +373,15 @@ export function DevPanel() {
             onValueChange={(v) => setTab(v as any)}
             className="flex-1 flex flex-col min-h-0"
           >
-            <TabsList className="mx-4 mt-3 grid grid-cols-5 shrink-0">
+            <TabsList className="mx-4 mt-3 grid grid-cols-6 shrink-0">
               <TabsTrigger value="supremo" className="text-[10px]">
                 <Crown className="h-3.5 w-3.5 mr-1" /> Sup.
               </TabsTrigger>
               <TabsTrigger value="chat" className="text-[10px]">
                 <Hammer className="h-3.5 w-3.5 mr-1" /> Arq.
+              </TabsTrigger>
+              <TabsTrigger value="versions" className="text-[10px]">
+                <Rocket className="h-3.5 w-3.5 mr-1" /> Vers
               </TabsTrigger>
               <TabsTrigger value="ideas" className="text-[10px]">
                 <Lightbulb className="h-3.5 w-3.5 mr-1" /> Ideas
