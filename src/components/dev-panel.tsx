@@ -414,6 +414,30 @@ export function DevPanel() {
                 </div>
               </div>
 
+              <a
+                href="/architect-city"
+                className="group relative block overflow-hidden rounded-lg border border-cyan-400/40 bg-gradient-to-br from-cyan-500/15 via-background to-background p-3 transition hover:border-cyan-300 hover:shadow-[0_0_24px_rgba(34,211,238,0.25)]"
+              >
+                <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(34,211,238,0.4)_1px,transparent_1px),linear-gradient(90deg,rgba(34,211,238,0.4)_1px,transparent_1px)] [background-size:24px_24px]" />
+                <div className="relative flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-md border border-cyan-400/50 bg-cyan-400/10 text-cyan-300">
+                    <Crown className="h-4 w-4" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-[10px] uppercase tracking-[0.3em] text-cyan-300">
+                      Live City View · Ultra
+                    </div>
+                    <div className="text-sm font-medium">
+                      Abrir mapa global + sat&eacute;lite + IA geoespacial
+                    </div>
+                  </div>
+                  <div className="text-[10px] uppercase tracking-[0.25em] text-cyan-300/70">
+                    Entrar →
+                  </div>
+                </div>
+              </a>
+
+
               <div className="grid grid-cols-2 gap-2">
                 {SUPREMO_ACTIONS.map((a, i) => {
                   const Icon = a.icon;
