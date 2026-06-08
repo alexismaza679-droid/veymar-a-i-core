@@ -62,16 +62,21 @@ function CityView() {
   const meMarkerRef = useRef<any>(null);
   const trafficRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
+  const flowRef = useRef<any[]>([]);
+  const flowTimerRef = useRef<number | null>(null);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"roadmap" | "satellite" | "hybrid">("hybrid");
   const [traffic, setTraffic] = useState(false);
   const [spy, setSpy] = useState(true);
+  const [predict, setPredict] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [info, setInfo] = useState<{
     label: string;
     lat: number;
     lng: number;
   } | null>(null);
   const [ready, setReady] = useState(false);
+  const runGeocode = useServerFn(geocodeCity);
 
   const allowed = !loading && user?.email === OWNER_EMAIL;
 
