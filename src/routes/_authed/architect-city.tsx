@@ -376,6 +376,12 @@ function CityView() {
           label="Tráfico"
         />
         <CtrlBtn
+          icon={Activity}
+          active={predict}
+          onClick={() => setPredict((v) => !v)}
+          label="Predicción de flujo"
+        />
+        <CtrlBtn
           icon={ShieldAlert}
           active={spy}
           onClick={() => setSpy((v) => !v)}
