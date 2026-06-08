@@ -402,9 +402,11 @@ function CityView() {
             <span>LAT {info.lat.toFixed(5)}</span>
             <span>LNG {info.lng.toFixed(5)}</span>
           </div>
-          <div className="mt-2 text-[10px] text-cyan-200/60">
-            Heatmap simulado de actividad urbana (patrones agregados · sin rastreo
-            individual).
+          <div className="mt-2 text-[10px] leading-relaxed text-cyan-200/60">
+            Heatmap + predicción animada de flujo (tráfico y peatones estimados a
+            partir de hora, zona y patrones agregados). Simulación predictiva, no
+            vigilancia: no se rastrea a personas individuales ni se accede a
+            cámaras privadas.
           </div>
         </div>
       )}
