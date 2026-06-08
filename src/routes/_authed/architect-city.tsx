@@ -340,10 +340,10 @@ function CityView() {
           <Button
             size="sm"
             onClick={search}
-            disabled={!ready}
+            disabled={!ready || searching}
             className="h-9 gap-1 bg-cyan-500 text-black hover:bg-cyan-400"
           >
-            <Search className="h-4 w-4" /> Ir
+            <Search className="h-4 w-4" /> {searching ? "…" : "Ir"}
           </Button>
         </div>
       </div>
