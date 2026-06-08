@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +13,10 @@ import {
   Layers,
   Radar,
   ShieldAlert,
+  Activity,
 } from "lucide-react";
 import { toast } from "sonner";
+import { geocodeCity } from "@/lib/city-geocode.functions";
 
 export const Route = createFileRoute("/_authed/architect-city")({
   component: CityView,
