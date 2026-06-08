@@ -9,62 +9,60 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Clonar repo
+      # 1. Clonar repositorio
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Node correcto (evita EBADENGINE)
+      # 2. Node (SIN CACHE para evitar errores)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22.12.0
-          cache: npm
 
       # 3. Instalar dependencias
       - name: Install dependencies
-        run: npm ci || npm install
+        run: npm install
 
-      # 4. Build web app
+      # 4. Construir web app
       - name: Build web app
         run: npm run build
 
-      # 5. Capacitor setup
-      - name: Install Capacitor
+      # 5. Capacitor sync seguro
+      - name: Sync Capacitor
         run: |
           npm install @capacitor/cli @capacitor/android
           npx cap sync
 
-      # 6. Verificar estructura del proyecto
+      # 6. Debug estructura
       - name: Debug project structure
         run: |
-          echo "Root files:"
+          echo "📁 Root:"
           ls -la
-          echo "Android folder:"
-          ls -la android || echo "No android folder"
+          echo "📁 Android:"
+          ls -la android || echo "❌ Android no existe"
 
-      # 7. Setup Java (compatible con Android Gradle)
+      # 7. Java setup
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # 8. Build APK (ROBUSTO)
+      # 8. Build APK (SEGURO)
       - name: Build Android APK
         run: |
-          # Si no existe Android, lo crea
+          # Crear Android si no existe
           if [ ! -d "android" ]; then
-            echo "❌ Android folder missing → creating with Capacitor"
+            echo "❌ Android no existe → creando..."
             npx cap add android || true
             npx cap sync
           fi
 
-          # Entrar al proyecto Android
           cd android
 
-          # Verificación crítica
+          # Verificar Gradle
           if [ ! -f "gradlew" ]; then
-            echo "❌ gradlew not found"
+            echo "❌ gradlew no encontrado"
             exit 1
           fi
 
@@ -73,7 +71,7 @@ jobs:
           # Build APK
           ./gradlew assembleDebug
 
-      # 9. Subir APK como artefacto descargable
+      # 9. Subir APK como artifact
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
