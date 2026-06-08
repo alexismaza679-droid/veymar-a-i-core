@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,8 +13,10 @@ import {
   Layers,
   Radar,
   ShieldAlert,
+  Activity,
 } from "lucide-react";
 import { toast } from "sonner";
+import { geocodeCity } from "@/lib/city-geocode.functions";
 
 export const Route = createFileRoute("/_authed/architect-city")({
   component: CityView,
@@ -59,16 +62,21 @@ function CityView() {
   const meMarkerRef = useRef<any>(null);
   const trafficRef = useRef<any>(null);
   const heatRef = useRef<any>(null);
+  const flowRef = useRef<any[]>([]);
+  const flowTimerRef = useRef<number | null>(null);
   const [query, setQuery] = useState("");
   const [mode, setMode] = useState<"roadmap" | "satellite" | "hybrid">("hybrid");
   const [traffic, setTraffic] = useState(false);
   const [spy, setSpy] = useState(true);
+  const [predict, setPredict] = useState(true);
+  const [searching, setSearching] = useState(false);
   const [info, setInfo] = useState<{
     label: string;
     lat: number;
     lng: number;
   } | null>(null);
   const [ready, setReady] = useState(false);
+  const runGeocode = useServerFn(geocodeCity);
 
   const allowed = !loading && user?.email === OWNER_EMAIL;
 
@@ -116,15 +124,11 @@ function CityView() {
 
   const search = async () => {
     if (!query.trim() || !window.google?.maps) return;
-    const g = window.google;
-    const geocoder = new g.maps.Geocoder();
+    setSearching(true);
     try {
-      const res = await geocoder.geocode({ address: query });
-      const r = res.results?.[0];
-      if (!r) return toast.error("Lugar no encontrado");
-      const loc = r.geometry.location;
-      const lat = loc.lat();
-      const lng = loc.lng();
+      const r = await runGeocode({ data: { query } });
+      const { lat, lng, label } = r;
+      const g = window.google;
       mapRef.current.panTo({ lat, lng });
       mapRef.current.setZoom(14);
       if (markerRef.current) markerRef.current.setMap(null);
@@ -133,10 +137,13 @@ function CityView() {
         position: { lat, lng },
         animation: g.maps.Animation.DROP,
       });
-      setInfo({ label: r.formatted_address, lat, lng });
+      setInfo({ label, lat, lng });
       drawHeat(lat, lng);
-    } catch {
-      toast.error("Búsqueda falló");
+      if (predict) drawFlow(lat, lng);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Búsqueda falló");
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -144,7 +151,6 @@ function CityView() {
     const g = window.google;
     if (!g?.maps?.visualization) return;
     if (heatRef.current) heatRef.current.setMap(null);
-    // Simulación predictiva agregada (no rastreo real)
     const pts: any[] = [];
     const hour = new Date().getHours();
     const intensity = hour >= 7 && hour <= 22 ? 1 : 0.4;
@@ -171,6 +177,69 @@ function CityView() {
       ],
     });
   };
+
+  const clearFlow = () => {
+    flowRef.current.forEach((p) => p.setMap(null));
+    flowRef.current = [];
+    if (flowTimerRef.current) {
+      window.clearInterval(flowTimerRef.current);
+      flowTimerRef.current = null;
+    }
+  };
+
+  const drawFlow = (lat: number, lng: number) => {
+    const g = window.google;
+    if (!g?.maps || !mapRef.current) return;
+    clearFlow();
+    const hour = new Date().getHours();
+    const rush = (hour >= 7 && hour <= 10) || (hour >= 17 && hour <= 20);
+    const count = rush ? 26 : 14;
+    const symbol = {
+      path: "M 0,-1 0,1",
+      strokeOpacity: 1,
+      scale: 3,
+      strokeColor: "#22d3ee",
+    };
+    for (let i = 0; i < count; i++) {
+      const r1 = 0.018 + Math.random() * 0.012;
+      const r2 = 0.004 + Math.random() * 0.01;
+      const a1 = Math.random() * Math.PI * 2;
+      const a2 = a1 + (Math.random() - 0.5) * 1.2;
+      const path = [
+        { lat: lat + r1 * Math.cos(a1), lng: lng + r1 * Math.sin(a1) },
+        { lat: lat + r2 * Math.cos(a2), lng: lng + r2 * Math.sin(a2) },
+      ];
+      const poly = new g.maps.Polyline({
+        path,
+        map: mapRef.current,
+        strokeOpacity: 0,
+        strokeColor: "#22d3ee",
+        icons: [{ icon: symbol, offset: "0%", repeat: "14px" }],
+      });
+      flowRef.current.push(poly);
+    }
+    // animar offset (predicción agregada futura)
+    let pct = 0;
+    flowTimerRef.current = window.setInterval(() => {
+      pct = (pct + 2) % 200;
+      flowRef.current.forEach((poly) => {
+        const icons = poly.get("icons");
+        if (icons) {
+          icons[0].offset = `${pct}%`;
+          poly.set("icons", icons);
+        }
+      });
+    }, 60) as unknown as number;
+  };
+
+  useEffect(() => {
+    if (!info) return;
+    if (predict) drawFlow(info.lat, info.lng);
+    else clearFlow();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [predict]);
+
+  useEffect(() => () => clearFlow(), []);
 
   const locateMe = () => {
     if (!navigator.geolocation) return toast.error("Sin GPS");
@@ -271,10 +340,10 @@ function CityView() {
           <Button
             size="sm"
             onClick={search}
-            disabled={!ready}
+            disabled={!ready || searching}
             className="h-9 gap-1 bg-cyan-500 text-black hover:bg-cyan-400"
           >
-            <Search className="h-4 w-4" /> Ir
+            <Search className="h-4 w-4" /> {searching ? "…" : "Ir"}
           </Button>
         </div>
       </div>
@@ -307,6 +376,12 @@ function CityView() {
           label="Tráfico"
         />
         <CtrlBtn
+          icon={Activity}
+          active={predict}
+          onClick={() => setPredict((v) => !v)}
+          label="Predicción de flujo"
+        />
+        <CtrlBtn
           icon={ShieldAlert}
           active={spy}
           onClick={() => setSpy((v) => !v)}
@@ -327,9 +402,11 @@ function CityView() {
             <span>LAT {info.lat.toFixed(5)}</span>
             <span>LNG {info.lng.toFixed(5)}</span>
           </div>
-          <div className="mt-2 text-[10px] text-cyan-200/60">
-            Heatmap simulado de actividad urbana (patrones agregados · sin rastreo
-            individual).
+          <div className="mt-2 text-[10px] leading-relaxed text-cyan-200/60">
+            Heatmap + predicción animada de flujo (tráfico y peatones estimados a
+            partir de hora, zona y patrones agregados). Simulación predictiva, no
+            vigilancia: no se rastrea a personas individuales ni se accede a
+            cámaras privadas.
           </div>
         </div>
       )}
