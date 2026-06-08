@@ -9,56 +9,71 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1. Descargar repo
+      # 1. Clonar repo
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 2. Usar Node correcto (IMPORTANTE para errores EBADENGINE)
+      # 2. Node correcto (evita EBADENGINE)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 22.12.0
+          cache: npm
 
       # 3. Instalar dependencias
       - name: Install dependencies
-        run: npm install
+        run: npm ci || npm install
 
-      # 4. Build web
+      # 4. Build web app
       - name: Build web app
         run: npm run build
 
-      # 5. Capacitor setup seguro
+      # 5. Capacitor setup
       - name: Install Capacitor
         run: |
           npm install @capacitor/cli @capacitor/android
           npx cap sync
 
-      # 6. Verificar estructura (debug útil)
-      - name: Check project structure
+      # 6. Verificar estructura del proyecto
+      - name: Debug project structure
         run: |
+          echo "Root files:"
           ls -la
-          ls -la android || echo "ANDROID NO EXISTE (warning)"
+          echo "Android folder:"
+          ls -la android || echo "No android folder"
 
-      # 7. Setup Java
+      # 7. Setup Java (compatible con Android Gradle)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
-      # 8. Dar permisos a Gradle y compilar APK
+      # 8. Build APK (ROBUSTO)
       - name: Build Android APK
         run: |
+          # Si no existe Android, lo crea
           if [ ! -d "android" ]; then
-            echo "Android folder not found, syncing Capacitor..."
+            echo "❌ Android folder missing → creating with Capacitor"
             npx cap add android || true
             npx cap sync
           fi
 
-          chmod +x android/gradlew
-          ./android/gradlew assembleDebug
+          # Entrar al proyecto Android
+          cd android
 
-      # 9. Subir APK como archivo descargable
+          # Verificación crítica
+          if [ ! -f "gradlew" ]; then
+            echo "❌ gradlew not found"
+            exit 1
+          fi
+
+          chmod +x gradlew
+
+          # Build APK
+          ./gradlew assembleDebug
+
+      # 9. Subir APK como artefacto descargable
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
