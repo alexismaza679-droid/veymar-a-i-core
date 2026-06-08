@@ -19,6 +19,7 @@ import { Route as ApiDevChatRouteImport } from './routes/api/dev-chat'
 import { Route as ApiDevActionRouteImport } from './routes/api/dev-action'
 import { Route as ApiChatRouteImport } from './routes/api/chat'
 import { Route as AuthedChatRouteImport } from './routes/_authed/chat'
+import { Route as AuthedArchitectCityRouteImport } from './routes/_authed/architect-city'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -69,10 +70,16 @@ const AuthedChatRoute = AuthedChatRouteImport.update({
   path: '/chat',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedArchitectCityRoute = AuthedArchitectCityRouteImport.update({
+  id: '/architect-city',
+  path: '/architect-city',
+  getParentRoute: () => AuthedRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/architect-city': typeof AuthedArchitectCityRoute
   '/chat': typeof AuthedChatRoute
   '/api/chat': typeof ApiChatRoute
   '/api/dev-action': typeof ApiDevActionRoute
@@ -84,6 +91,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/architect-city': typeof AuthedArchitectCityRoute
   '/chat': typeof AuthedChatRoute
   '/api/chat': typeof ApiChatRoute
   '/api/dev-action': typeof ApiDevActionRoute
@@ -97,6 +105,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/auth': typeof AuthRoute
+  '/_authed/architect-city': typeof AuthedArchitectCityRoute
   '/_authed/chat': typeof AuthedChatRoute
   '/api/chat': typeof ApiChatRoute
   '/api/dev-action': typeof ApiDevActionRoute
@@ -110,6 +119,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/architect-city'
     | '/chat'
     | '/api/chat'
     | '/api/dev-action'
@@ -121,6 +131,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/architect-city'
     | '/chat'
     | '/api/chat'
     | '/api/dev-action'
@@ -133,6 +144,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authed'
     | '/auth'
+    | '/_authed/architect-city'
     | '/_authed/chat'
     | '/api/chat'
     | '/api/dev-action'
@@ -226,14 +238,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedChatRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/architect-city': {
+      id: '/_authed/architect-city'
+      path: '/architect-city'
+      fullPath: '/architect-city'
+      preLoaderRoute: typeof AuthedArchitectCityRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
+  AuthedArchitectCityRoute: typeof AuthedArchitectCityRoute
   AuthedChatRoute: typeof AuthedChatRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
+  AuthedArchitectCityRoute: AuthedArchitectCityRoute,
   AuthedChatRoute: AuthedChatRoute,
 }
 
@@ -254,3 +275,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
