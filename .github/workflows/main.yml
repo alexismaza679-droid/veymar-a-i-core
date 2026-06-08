@@ -9,37 +9,56 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Descargar repo
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2. Usar Node correcto (IMPORTANTE para errores EBADENGINE)
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.12.0
 
+      # 3. Instalar dependencias
       - name: Install dependencies
         run: npm install
 
+      # 4. Build web
       - name: Build web app
         run: npm run build
 
+      # 5. Capacitor setup seguro
       - name: Install Capacitor
         run: |
           npm install @capacitor/cli @capacitor/android
           npx cap sync
 
+      # 6. Verificar estructura (debug útil)
+      - name: Check project structure
+        run: |
+          ls -la
+          ls -la android || echo "ANDROID NO EXISTE (warning)"
+
+      # 7. Setup Java
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
 
+      # 8. Dar permisos a Gradle y compilar APK
       - name: Build Android APK
         run: |
-          cd android
-          chmod +x gradlew
-          ./gradlew assembleDebug
+          if [ ! -d "android" ]; then
+            echo "Android folder not found, syncing Capacitor..."
+            npx cap add android || true
+            npx cap sync
+          fi
 
+          chmod +x android/gradlew
+          ./android/gradlew assembleDebug
+
+      # 9. Subir APK como archivo descargable
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
