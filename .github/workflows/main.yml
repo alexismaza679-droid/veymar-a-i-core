@@ -24,26 +24,31 @@ jobs:
       - name: Instalar dependencias
         run: npm install
 
-      - name: Construir proyecto
-        run: npm run build
+      - name: Generar carpeta dist
+        run: |
+          npm run build
+          ls -la
+          ls -la dist || true
 
-      - name: Instalar Capacitor Android
-        run: npm install @capacitor/android --save
+      - name: Instalar Android Capacitor
+        run: npm install @capacitor/android
 
       - name: Crear Android
-        run: |
-          npx cap add android || true
+        run: npx cap add android || true
 
-      - name: Sincronizar Capacitor
-        run: npx cap sync android
+      - name: Copiar web a Android
+        run: npx cap copy
 
-      - name: Configurar Java 21
+      - name: Sincronizar
+        run: npx cap sync
+
+      - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: "21"
 
-      - name: Dar permisos Gradle
+      - name: Dar permisos
         run: chmod +x android/gradlew
 
       - name: Compilar APK
