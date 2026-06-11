@@ -3,7 +3,8 @@ import type { CapacitorConfig } from "@capacitor/cli";
 const config: CapacitorConfig = {
   appId: "app.lovable.veymar",
   appName: "VEYMAR A.I.",
-  webDir: "dist",
+
+  webDir: ".output/public",
 
   android: {
     allowMixedContent: true,
