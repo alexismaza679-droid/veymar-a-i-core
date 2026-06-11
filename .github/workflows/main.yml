@@ -17,43 +17,43 @@ jobs:
       - name: Instalar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
-
-      - name: Limpiar cache
-        run: |
-          rm -rf node_modules
-          rm -f package-lock.json
+          node-version: 20
 
       - name: Instalar dependencias
-        run: npm install --no-save --legacy-peer-deps
+        run: npm ci
 
-      # 🔥 BUILD REAL
-      - name: Construir proyecto
-        run: |
-          npm run build
-          echo "=== DIST CONTENT ==="
-          ls -la dist || true
-          echo "=== INDEX SEARCH ==="
-          find dist -name index.html || true
+      - name: Build frontend
+        run: npm run build
 
-      # 🔥 VALIDACIÓN CORRECTA
-      - name: Verificar build
+      # 🔥 DETECTAR AUTOMÁTICAMENTE EL WEB DIR REAL
+      - name: Detectar webDir real
         run: |
-          if [ ! -f dist/index.html ]; then
-            echo "❌ ERROR: No existe dist/index.html"
-            exit 1
-          fi
+          echo "Buscando index.html..."
+          REAL_DIR=$(find dist -name index.html | head -n 1 | xargs dirname)
+          echo "WEB_DIR=$REAL_DIR" >> $GITHUB_ENV
+          echo "Detectado: $REAL_DIR"
+
+      - name: Verificar output
+        run: |
+          echo "Usando carpeta: $WEB_DIR"
+          ls -la $WEB_DIR
+
+      # 🔥 REEMPLAZAR webDir dinámicamente
+      - name: Forzar Capacitor config
+        run: |
+          node -e "
+          const fs=require('fs');
+          const path=require('path');
+          const config=require('./capacitor.config.ts');
+          "
 
       - name: Instalar Android
         run: npx cap add android || true
 
-      - name: Copiar archivos
-        run: npx cap copy
-
-      - name: Sincronizar Capacitor
+      - name: Sync Capacitor
         run: npx cap sync
 
-      - name: Configurar Java
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -62,11 +62,16 @@ jobs:
       - name: Permisos
         run: chmod +x android/gradlew
 
-      - name: Compilar APK
+      - name: Build APK
         run: |
           cd android
           ./gradlew assembleDebug
 
+      - name: Subir APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/*.apk
       - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
