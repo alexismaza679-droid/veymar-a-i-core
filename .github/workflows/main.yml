@@ -12,50 +12,40 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      - name: Clonar repositorio
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Instalar Node
         uses: actions/setup-node@v4
         with:
-          node-version: "22"
+          node-version: 22
+
+      - name: Limpiar cache
+        run: |
+          rm -rf node_modules
+          rm -f package-lock.json
 
       - name: Instalar dependencias
-        run: |
-          rm -f package-lock.json
-          npm install --legacy-peer-deps
+        run: npm install --no-save --legacy-peer-deps
 
       - name: Construir proyecto
-        run: |
-          npm run build
-          ls -la
-          ls -la .output || true
-          ls -la .output/public || true
+        run: npm run build
 
-      - name: Instalar Android Capacitor
-        run: |
-          npm install @capacitor/android --legacy-peer-deps
+      - name: Instalar Android
+        run: npx cap add android || true
 
-      - name: Crear Android
-        run: |
-          npx cap add android || true
+      - name: Copiar archivos
+        run: npx cap copy
 
-      - name: Copiar archivos web
-        run: |
-          npx cap copy
-
-      - name: Sincronizar Capacitor
-        run: |
-          npx cap sync
+      - name: Sincronizar
+        run: npx cap sync
 
       - name: Configurar Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: "21"
+          java-version: 21
 
-      - name: Permisos Gradle
+      - name: Permisos
         run: chmod +x android/gradlew
 
       - name: Compilar APK
