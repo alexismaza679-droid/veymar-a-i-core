@@ -8,15 +8,14 @@ on:
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
 
-      - name: Clonar repositorio
+      - name: Descargar código
         uses: actions/checkout@v4
 
-      - name: Instalar Node.js
+      - name: Instalar Node 22
         uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -27,8 +26,17 @@ jobs:
       - name: Construir proyecto
         run: npm run build
 
+      - name: Instalar Capacitor Android
+        run: |
+          npm install @capacitor/android --save
+
+      - name: Crear plataforma Android
+        run: |
+          npx cap add android || true
+
       - name: Sincronizar Capacitor
-        run: npx cap sync android
+        run: |
+          npx cap sync android
 
       - name: Configurar Java
         uses: actions/setup-java@v4
@@ -36,7 +44,7 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Permisos Gradle
+      - name: Permitir Gradle
         run: chmod +x android/gradlew
 
       - name: Compilar APK
@@ -47,5 +55,5 @@ jobs:
       - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
-          name: APK
+          name: app-debug
           path: android/app/build/outputs/apk/debug/*.apk
