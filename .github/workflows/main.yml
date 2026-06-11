@@ -1,59 +1,50 @@
-name: Build Veymar AI APK
+name: Build Android APK
 
 on:
-push:
-branches:
-- main
+  push:
+    branches:
+      - main
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
 
-steps:
-  # 1. Clonar repositorio
-  - name: Checkout code
-    uses: actions/checkout@v4
+    runs-on: ubuntu-latest
 
-  # 2. Node.js
-  - name: Setup Node
-    uses: actions/setup-node@v4
-    with:
-      node-version: 22
+    steps:
 
-  # 3. Java 21 (requerido por Capacitor 8)
-  - name: Setup Java
-    uses: actions/setup-java@v4
-    with:
-      distribution: temurin
-      java-version: '21'
-      cache: gradle
+      - name: Descargar proyecto
+        uses: actions/checkout@v4
 
-  # 4. Instalar dependencias
-  - name: Install dependencies
-    run: npm install
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-  # 5. Compilar aplicación web
-  - name: Build web app
-    run: npm run build
+      - name: Instalar dependencias
+        run: npm install
 
-  # 6. Regenerar Android limpio
-  - name: Setup Android Project
-    run: |
-      rm -rf android
-      npx cap add android
-      npx cap sync android
+      - name: Construir web
+        run: npm run build
 
-  # 7. Construir APK
-  - name: Build Android APK
-    run: |
-      cd android
-      chmod +x gradlew
-      ./gradlew clean
-      ./gradlew assembleDebug --stacktrace
+      - name: Sincronizar Capacitor
+        run: npx cap sync android
 
-  # 8. Subir APK
-  - name: Upload APK
-    uses: actions/upload-artifact@v4
-    with:
-      name: veymar-ai-apk
-      path: android/app/build/outputs/apk/debug/app-debug.apk
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Dar permisos
+        run: chmod +x android/gradlew
+
+      - name: Generar APK
+        run: |
+          cd android
+          ./gradlew assembleDebug
+
+      - name: Subir APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: android/app/build/outputs/apk/debug/*.apk
