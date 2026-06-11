@@ -28,7 +28,14 @@ jobs:
         run: npm install --no-save --legacy-peer-deps
 
       - name: Construir proyecto
-        run: npm run build
+        run: |
+          npm run build
+          echo "=== DIST ==="
+          ls -la dist || true
+          echo "=== OUTPUT ==="
+          ls -la .output || true
+          echo "=== ROOT ==="
+          ls -la
 
       - name: Instalar Android
         run: npx cap add android || true
