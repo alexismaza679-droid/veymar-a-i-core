@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: "app.lovable.veymar",
   appName: "VEYMAR A.I.",
 
-  // 🔥 ESTE ES EL CORRECTO SEGÚN TU BUILD
+  // 🔥 ESTE ES EL CORRECTO (TU BUILD REAL)
   webDir: "dist",
 
   android: {
