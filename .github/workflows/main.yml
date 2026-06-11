@@ -22,25 +22,32 @@ jobs:
           node-version: "22"
 
       - name: Instalar dependencias
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install --legacy-peer-deps
 
-      - name: Generar carpeta dist
+      - name: Construir proyecto
         run: |
           npm run build
           ls -la
-          ls -la dist || true
+          ls -la .output || true
+          ls -la .output/public || true
 
       - name: Instalar Android Capacitor
-        run: npm install @capacitor/android
+        run: |
+          npm install @capacitor/android --legacy-peer-deps
 
       - name: Crear Android
-        run: npx cap add android || true
+        run: |
+          npx cap add android || true
 
-      - name: Copiar web a Android
-        run: npx cap copy
+      - name: Copiar archivos web
+        run: |
+          npx cap copy
 
-      - name: Sincronizar
-        run: npx cap sync
+      - name: Sincronizar Capacitor
+        run: |
+          npx cap sync
 
       - name: Configurar Java
         uses: actions/setup-java@v4
@@ -48,7 +55,7 @@ jobs:
           distribution: temurin
           java-version: "21"
 
-      - name: Dar permisos
+      - name: Permisos Gradle
         run: chmod +x android/gradlew
 
       - name: Compilar APK
