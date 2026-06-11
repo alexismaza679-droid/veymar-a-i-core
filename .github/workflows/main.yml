@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -12,18 +13,18 @@ jobs:
 
     steps:
 
-      - name: Descargar proyecto
+      - name: Clonar repositorio
         uses: actions/checkout@v4
 
-      - name: Instalar Node
+      - name: Instalar Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Instalar dependencias
         run: npm install
 
-      - name: Construir web
+      - name: Construir proyecto
         run: npm run build
 
       - name: Sincronizar Capacitor
@@ -35,10 +36,10 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Dar permisos
+      - name: Permisos Gradle
         run: chmod +x android/gradlew
 
-      - name: Generar APK
+      - name: Compilar APK
         run: |
           cd android
           ./gradlew assembleDebug
@@ -46,5 +47,5 @@ jobs:
       - name: Subir APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: APK
           path: android/app/build/outputs/apk/debug/*.apk
