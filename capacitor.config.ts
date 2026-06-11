@@ -4,7 +4,8 @@ const config: CapacitorConfig = {
   appId: "app.lovable.veymar",
   appName: "VEYMAR A.I.",
 
-  webDir: "dist/client",
+  // 🔥 ESTE ES EL CORRECTO SEGÚN TU BUILD
+  webDir: "dist",
 
   android: {
     allowMixedContent: true,
