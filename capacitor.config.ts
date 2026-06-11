@@ -4,7 +4,7 @@ const config: CapacitorConfig = {
   appId: "app.lovable.veymar",
   appName: "VEYMAR A.I.",
 
-  // 🔥 ESTE ES EL CORRECTO (TU BUILD REAL)
+  // ✔️ VITE REAL OUTPUT (SIEMPRE TIENE index.html)
   webDir: "dist",
 
   android: {
@@ -13,7 +13,7 @@ const config: CapacitorConfig = {
 
   plugins: {
     SplashScreen: {
-      launchShowDuration: 1500,
+      launchShowDuration: 1200,
       backgroundColor: "#05070D",
       androidScaleType: "CENTER_CROP",
       showSpinner: false,
